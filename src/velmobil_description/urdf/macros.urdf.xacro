@@ -2,44 +2,63 @@
 <robot name="simple_velmobil" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
     <xacro:macro name="wheel" params="prefix x y">
-        <joint name="${prefix}_wheel_joint" type="continuous">
-            <origin xyz="${x} ${y} 0.3" rpy="-${pi/2} 0 0"/>
-            <parent link="base_link"/>
-            <child link="${prefix}_wheel"/>
-            <axis xyz="0 0 1"/>
-            <dynamics damping="0.2"/>
-        </joint>
         <link name="${prefix}_wheel">
-            <collision><geometry><sphere radius="0.3"/></geometry></collision>
-            <visual><geometry><sphere radius="0.3"/></geometry><material name="black"/></visual>
+            <collision>
+                <origin xyz="0 0 0" rpy="${-pi/2} 0 0"/>
+                <geometry><cylinder length="0.1" radius="${wheel_radius}"/></geometry>
+            </collision>
+            <visual>
+                <origin xyz="0 0 0" rpy="${-pi/2} 0 0"/>
+                <geometry>
+                    <cylinder length="0.1" radius="${wheel_radius}"/>
+                </geometry>
+                <material name="black"/>
+            </visual>
             <inertial>
-                <mass value="2"/>
+                <mass value="1.0"/>
                 <inertia ixx="0.145" ixy="0.0" ixz="0.0" iyy="0.145" iyz="0.0" izz="0.125"/>
             </inertial>
         </link>
+        <joint name="${prefix}_wheel_joint" type="continuous">
+            <origin xyz="${x} ${y} ${-wheel_base_offset}" rpy="0 0 0"/>
+            <parent link="base_link"/>
+            <child link="${prefix}_wheel"/>
+            <axis xyz="0 1 0"/>
+            <dynamics damping="0.2"/>
+        </joint>
     </xacro:macro>
 
     <xacro:macro name="wheel_friction" params="prefix dir">
         <gazebo reference="${prefix}_wheel">
             <collision>
                 <surface>
-                <friction>
-                    <ode>
-                        <mu1>1.0</mu1><mu2>1.0</mu2>
-                        <kp>1000000.0</kp><kd>10.0</kd><minDepth>0.001</minDepth>
-                        <fdir1 gz:expressed_in="base_link">1 ${dir} 0</fdir1>
-                    </ode>
-                </friction>
+                    <friction>
+                        <ode>
+                            <mu>1.0</mu>
+                            <mu2>0.01</mu2>
+                            <fdir1>1 ${dir} 0</fdir1>
+                            <slip1>0.0</slip1>
+                            <slip2>0.5</slip2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <kp>1000000.0</kp>
+                            <kd>1.0</kd>
+                            <min_depth>0.001</min_depth>
+                        </ode>
+                    </contact>
                 </surface>
             </collision>
+            <selfCollide>false</selfCollide>
         </gazebo>
     </xacro:macro>
 
     <xacro:macro name="joint_interface" params="name">
         <joint name="${name}">
             <command_interface name="velocity">
-                <param name="min">-1</param>
-                <param name="max">1</param>
+                <param name="min">-10000</param>
+                <param name="max">10000</param>
             </command_interface>
             <state_interface name="position"/>
             <state_interface name="velocity"/>

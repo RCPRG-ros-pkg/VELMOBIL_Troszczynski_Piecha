@@ -6,7 +6,7 @@
   <description>Simulation configuration for GZ SIM</description>
   <maintainer email="troszczynskikamil@outlook.com">Kamil Troszczyński</maintainer>
   <maintainer email="milosz.piecha05@gmail.com">Miłosz Piecha</maintainer>
-  <!-- <license>TODO: License declaration</license> -->
+  <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   

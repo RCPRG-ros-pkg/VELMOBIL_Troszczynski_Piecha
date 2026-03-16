@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 1000 
+    update_rate: 100 
     use_sim_time: true
 
     joint_state_broadcaster:
@@ -23,9 +23,9 @@ mecanum_drive_controller:
       - velocity
     kinematics:
         base_frame_offset: { x: 0.0, y: 0.0, theta: 0.0 }
-        wheels_radius: 0.3
-        wheels_x_separation: 0.6 
-        wheels_y_separation: 0.5
+        wheels_radius: 0.1
+        wheels_x_separation: 0.72 
+        wheels_y_separation: 0.76
         sum_of_robot_center_projection_on_X_Y_axis: 1.1
     base_frame_id: "base_link"
     odom_frame_id: "odom"
