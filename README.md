@@ -33,7 +33,7 @@ chmod +x dependencies_install.sh
 3. Build and source
 ```bash
 colcon build
-source instal/setup.bash
+source install/setup.bash
 ```
 
 ### Running simulation
