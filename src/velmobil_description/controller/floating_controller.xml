@@ -1,0 +1,9 @@
+<library path="floating_controller">
+    <class name="floating_controller/FloatingController"
+           type="floating_controller::FloatingController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>
+            Custom controller for Velmobil in ghost version - no wheels, only floating chassis.
+        </description>
+    </class>
+</library>

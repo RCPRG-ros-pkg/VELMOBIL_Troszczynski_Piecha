@@ -31,7 +31,7 @@ def generate_launch_description():
     ])
     robot_controllers = PathJoinSubstitution([
         velmobil_description,
-        'control',
+        'control_config',
         'simple_velmobil.yaml'
     ])
     simple_velmobil_urdf = PathJoinSubstitution([
