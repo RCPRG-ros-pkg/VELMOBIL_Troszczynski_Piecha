@@ -11,6 +11,16 @@
 #include "geometry_msgs/msg/twist.hpp"
 
 
+/*
+BEST TUTORIAL EVER:
+    https://github.com/masum919/my_custom_controller/tree/main
+
+NEED TO PUT THIS STUFF INTO SOME DOCS... instead of writing comments in code
+*/
+
+
+// WHAT IT DOES: it publisher vx, vy, omega, BUT gz cannot handle that planar kinematics. So it actualy publishes Kinematic TF.
+
 namespace floating_controller {
 
     FloatingController::FloatingController(): controller_interface::ControllerInterface() {}
@@ -79,6 +89,7 @@ namespace floating_controller {
 
     controller_interface::CallbackReturn FloatingController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/) {
         twist_command = geometry_msgs::msg::Twist();
+        tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(get_node());
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController activated.");
 
         return controller_interface::CallbackReturn::SUCCESS;
@@ -120,8 +131,26 @@ namespace floating_controller {
             return controller_interface::return_type::ERROR;
         }
 
-            return controller_interface::return_type::OK;
-        }
+        geometry_msgs::msg::TransformStamped t;
+        t.header.stamp = rclcpp::Clock().now();
+        t.header.frame_id = "world";
+        t.child_frame_id = "base_footprint";
+
+        t.transform.translation.x = x;
+        t.transform.translation.y = y;
+        t.transform.translation.z = 0.0;
+
+        tf2::Quaternion q;
+        q.setRPY(0, 0, theta);
+        t.transform.rotation.x = q.x();
+        t.transform.rotation.y = q.y();
+        t.transform.rotation.z = q.z();
+        t.transform.rotation.w = q.w();
+
+        tf_broadcaster->sendTransform(t);
+
+        return controller_interface::return_type::OK;
+    }
 
 
     controller_interface::CallbackReturn FloatingController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) {

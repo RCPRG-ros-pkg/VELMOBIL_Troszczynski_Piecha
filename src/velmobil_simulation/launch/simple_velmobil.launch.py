@@ -32,12 +32,12 @@ def generate_launch_description():
     robot_controllers = PathJoinSubstitution([
         velmobil_description,
         'control_config',
-        'simple_velmobil.yaml'
+        'velmobil.yaml'
     ])
-    simple_velmobil_urdf = PathJoinSubstitution([
+    velmobil_urdf = PathJoinSubstitution([
         velmobil_description,
         'urdf',
-        'simple_velmobil.urdf.xacro'
+        'velmobil.urdf.xacro'
     ])
 
 
@@ -52,7 +52,7 @@ def generate_launch_description():
     robot_description_content = Command([
         PathJoinSubstitution([FindExecutable(name='xacro')]),
         ' ',
-        simple_velmobil_urdf,
+        velmobil_urdf,
     ])
     
 
@@ -73,7 +73,7 @@ def generate_launch_description():
         executable='create',
         output='screen',
         arguments=['-topic', 'robot_description',
-                   '-name', 'simple_velmobil', '-allow_renaming', 'true'],
+                   '-name', 'velmobil', '-allow_renaming', 'true'],
     )
 
     joint_state_broadcaster_spawner = Node(
