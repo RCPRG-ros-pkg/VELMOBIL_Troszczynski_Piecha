@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <robot name="velmobil" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
+  
+  <xacro:arg name="floating" default="true"/>
 
   <xacro:include filename="$(find velmobil_description)/urdf/properties.urdf.xacro" />
   <xacro:include filename="$(find velmobil_description)/urdf/macros.urdf.xacro" />
 
-  <link name="world" />
   <link name="base_footprint" />
   <link name="base_link">
     <collision>
@@ -27,11 +28,6 @@
       <parent link="base_footprint"/>
       <child link="base_link"/>
   </joint>
-  <joint name="world_base_joint" type="planar">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-    <parent link="world"/>
-    <child link="base_footprint"/>
-  </joint>
 
   <xacro:wheel prefix="front_left" x="0.5" y="${wheel_y_offset}"/>
   <xacro:wheel prefix="front_right" x="0.5" y="${-wheel_y_offset}"/>
@@ -52,14 +48,25 @@
     <xacro:joint_interface name="rear_right_wheel_joint"/>
   </ros2_control>
 
-  <gazebo>
-    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find velmobil_description)/control_config/velmobil.yaml</parameters>
-      <ros>
-        <remapping>/mecanum_drive_controller/reference:=/cmd_vel</remapping>
-        <remapping>/mecanum_drive_controller/odom:=/odom</remapping>
-      </ros>
-    </plugin>
-  </gazebo>
+
+  <xacro:if value="$(arg floating)">
+    <gazebo>
+      <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>$(find velmobil_description)/control_config/floating_velmobil.yaml</parameters>
+      </plugin>
+    </gazebo>
+  </xacro:if>
+  <xacro:unless value="$(arg floating)">
+    <gazebo>
+      <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+        <parameters>$(find velmobil_description)/control_config/velmobil.yaml</parameters>
+        <ros>
+          <remapping>/mecanum_drive_controller/reference:=/cmd_vel</remapping>
+          <remapping>/mecanum_drive_controller/odom:=/odom</remapping>
+        </ros>
+      </plugin>
+    </gazebo>
+  </xacro:unless>
+
 
 </robot>

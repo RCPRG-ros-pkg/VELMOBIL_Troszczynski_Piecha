@@ -41,15 +41,6 @@ namespace floating_controller {
     }
 
     controller_interface::CallbackReturn FloatingController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) {
-        if (joint_names.size() != 3) {
-            RCLCPP_ERROR(get_node()->get_logger(),
-                        "Expected exactly 3 joint names, but got %zu", joint_names.size());
-            return controller_interface::CallbackReturn::ERROR;
-        }
-
-        x_joint = joint_names[0];
-        y_joint = joint_names[1];
-        theta_joint = joint_names[2];
 
         auto callback = [this](const geometry_msgs::msg::Twist::SharedPtr msg) -> void {
             // Store the latest Twist command
@@ -89,7 +80,6 @@ namespace floating_controller {
 
     controller_interface::CallbackReturn FloatingController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/) {
         twist_command = geometry_msgs::msg::Twist();
-        tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(get_node());
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController activated.");
 
         return controller_interface::CallbackReturn::SUCCESS;
@@ -98,7 +88,7 @@ namespace floating_controller {
     controller_interface::return_type FloatingController::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & period) {
         // Extract linear and angular velocity commands from Twist message
         double vx_linear  = twist_command.linear.x; // Vx
-        double vy_linear  = twist_command.linear.x; // Vy
+        double vy_linear  = twist_command.linear.y; // Vy
         double omega = twist_command.angular.z; // omega
 
         const double rad_per_sec_to_rpm = 60.0 / (2.0 * M_PI);
@@ -107,9 +97,6 @@ namespace floating_controller {
         // Convert linear velocity from mm/s to m/s
         theta += omega * rad_per_sec_to_rpm; // theta state
 
-        vx_linear = vx_linear / 1000.0;
-        vy_linear = vy_linear / 1000.0;
-
         x += (vx_linear*cos(theta) - vy_linear*sin(theta)) * dt; // x state
         y += (vx_linear*sin(theta) + vy_linear*cos(theta)) * dt; // y state
 
@@ -117,10 +104,7 @@ namespace floating_controller {
         RCLCPP_DEBUG(get_node()->get_logger(), "Calculated State: x=%.2f, y=%.2f, theta=%.2f", x, y, theta);
 
 
-        if (command_interfaces_.size() >= 3) {
-            command_interfaces_[0].set_value(vx_linear);
-            command_interfaces_[1].set_value(vy_linear);
-            command_interfaces_[2].set_value(omega);
+        if (command_interfaces_.size() >= 0) {
 
             RCLCPP_DEBUG(get_node()->get_logger(),
                         "Sent commands: vx=%.3f, vy=%.3f, omega=%.3f",
@@ -131,38 +115,31 @@ namespace floating_controller {
             return controller_interface::return_type::ERROR;
         }
 
-        geometry_msgs::msg::TransformStamped t;
-        t.header.stamp = rclcpp::Clock().now();
-        t.header.frame_id = "world";
-        t.child_frame_id = "base_footprint";
-
-        t.transform.translation.x = x;
-        t.transform.translation.y = y;
-        t.transform.translation.z = 0.0;
-
-        tf2::Quaternion q;
-        q.setRPY(0, 0, theta);
-        t.transform.rotation.x = q.x();
-        t.transform.rotation.y = q.y();
-        t.transform.rotation.z = q.z();
-        t.transform.rotation.w = q.w();
-
-        tf_broadcaster->sendTransform(t);
+        teleport_robot();
 
         return controller_interface::return_type::OK;
     }
 
 
     controller_interface::CallbackReturn FloatingController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) {
-        if (command_interfaces_.size() >= 3) {
-            command_interfaces_[0].set_value(0.0);
-            command_interfaces_[1].set_value(0.0);
-            command_interfaces_[2].set_value(0.0);
-        }
-
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController deactivated. Motors set to zero.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
+
+    void FloatingController::teleport_robot() {
+        std::stringstream cmd;
+
+        cmd << "ign service "
+            << "-s /world/empty/set_pose "
+            << "--reqtype ignition.msgs.Pose "
+            << "--reptype ignition.msgs.Boolean "
+            << "--timeout 2000 "
+            << "--req 'name: \"velmobil\", position: {x: " << x << ", y: " << y <<", z: 0.0}'";
+
+
+        std::system((cmd.str() + " > /dev/null").c_str());
+    }
+
 
 } // namespace floating_controller
 

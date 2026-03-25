@@ -1,5 +1,6 @@
 import os
-from launch import LaunchDescription
+import xacro
+from launch import LaunchDescription, LaunchContext
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -7,9 +8,17 @@ from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.conditions import IfCondition
+from launch.conditions import IfCondition, UnlessCondition
 from ament_index_python.packages import get_package_share_directory
 
+
+
+"""
+QUICK GUIDE:
+floating - (True/False) - floating_controller / mecanum_drive_controller
+rviz - (True/False) - Rviz ON / Rviz OFF
+world - Full path to the SDF world file to load
+"""
 
 def generate_launch_description():
     # PACKAGES
@@ -29,10 +38,15 @@ def generate_launch_description():
         'gz_bridge',
         'bridge_config.yaml'
     ])
-    robot_controllers = PathJoinSubstitution([
+    robot_controller_mecanum = PathJoinSubstitution([
         velmobil_description,
         'control_config',
         'velmobil.yaml'
+    ])
+    robot_controller_floating = PathJoinSubstitution([
+        velmobil_description,
+        'control_config',
+        'floating_velmobil.yaml'
     ])
     velmobil_urdf = PathJoinSubstitution([
         velmobil_description,
@@ -46,6 +60,7 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default=True)
     rviz = LaunchConfiguration('rviz', default=True)
     world = LaunchConfiguration('world')
+    floating = LaunchConfiguration('floating', default=True)
 
 
     # XACRO COMMAND
@@ -53,10 +68,12 @@ def generate_launch_description():
         PathJoinSubstitution([FindExecutable(name='xacro')]),
         ' ',
         velmobil_urdf,
+        ' ',
+        'floating:=', floating
     ])
     
 
-
+    
     # NODES
     robot_state_publisher = Node(
         package='robot_state_publisher',
@@ -85,7 +102,15 @@ def generate_launch_description():
     mecanum_drive_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['mecanum_drive_controller', '--param-file', robot_controllers]
+        arguments=['mecanum_drive_controller', '--param-file', robot_controller_mecanum],
+        condition=UnlessCondition(floating) 
+    )
+
+    floating_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['floating_controller', '--param-file', robot_controller_floating],
+        condition=IfCondition(floating) 
     )
 
     bridge = Node(
@@ -135,6 +160,11 @@ def generate_launch_description():
             default_value='true',
             description='If true, rviz will launch'
         ),
+        DeclareLaunchArgument(
+            'floating',
+            default_value='true',
+            description='If true, floating motion model will apply'
+        ),
         
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
@@ -153,6 +183,12 @@ def generate_launch_description():
             event_handler=OnProcessExit(
                 target_action=joint_state_broadcaster_spawner,
                 on_exit=[mecanum_drive_controller_spawner],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=joint_state_broadcaster_spawner,
+                on_exit=[floating_controller_spawner],
             )
         ),
         

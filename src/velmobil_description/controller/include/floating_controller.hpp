@@ -9,6 +9,7 @@
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include <tf2/LinearMath/Quaternion.h>
@@ -34,17 +35,15 @@ namespace floating_controller {
         std::vector<std::string> joint_names;
         std::string interface_name;
 
-        std::string x_joint;
-        std::string y_joint;
-        std::string theta_joint;
-
         double x;
         double y;
         double theta;
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber;
         geometry_msgs::msg::Twist twist_command;
-        std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
+
+        void teleport_robot();
+    
     };
 
 } // namespace floating_controller
