@@ -39,7 +39,7 @@ source install/setup.bash
 ### Running simulation
 Bare simulation.
 ```bash
-ros2 launch velmobil_simulation velmobil.launch.py
+ros2 launch velmobil_simulation simple_velmobil.launch.py
 ```
 
 ### Trello Board
