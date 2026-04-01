@@ -42,8 +42,8 @@ Bare simulation.
 ros2 launch velmobil_simulation simple_velmobil.launch.py
 ```
 
-### Trello Board
-[Here](https://trello.com/b/TWRX2M6A/velmobil) is our Task Board used for progress control/dev logs.
+## Github Project
+[Here](https://github.com/orgs/RCPRG-ros-pkg/projects/22/views/1) is our Task Board used for progress control/dev logs.
 
 
 ## Future Dev Notes
