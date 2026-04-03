@@ -18,17 +18,26 @@ find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(realtime_tools REQUIRED)
-
+find_package(ignition-transport11 REQUIRED)
+find_package(ignition-msgs8 REQUIRED)
 
 
 add_library(floating_controller SHARED
   controller/floating_controller.cpp
 )
 
+
 target_include_directories(floating_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/controller/include>
   $<INSTALL_INTERFACE:include>
 )
+
+
+target_link_libraries(floating_controller
+  ignition-transport11::ignition-transport11
+  ignition-msgs8::ignition-msgs8
+)
+
 
 ament_target_dependencies(floating_controller
   rclcpp
@@ -41,9 +50,11 @@ ament_target_dependencies(floating_controller
   realtime_tools
 )
 
+
 pluginlib_export_plugin_description_file(controller_interface
   controller/floating_controller.xml
 )
+
 
 install(TARGETS floating_controller
   EXPORT export_${PROJECT_NAME}
@@ -52,9 +63,11 @@ install(TARGETS floating_controller
   RUNTIME DESTINATION bin
 )
 
+
 install(DIRECTORY controller/include/
   DESTINATION include
 )
+
 
 install(DIRECTORY
   urdf
@@ -64,8 +77,10 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+
 ament_export_include_directories(controller/include)
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
+
 
 ament_export_dependencies(
   rclcpp
@@ -80,11 +95,13 @@ ament_export_dependencies(
   realtime_tools
 )
 
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
 
 ament_package()

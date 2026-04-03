@@ -2,7 +2,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <hardware_interface/system_interface.hpp>
-#include <rclcpp_lifecycle/state.hpp>
 
 #include "controller_interface/controller_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -16,6 +15,12 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include "geometry_msgs/msg/twist.hpp"
+
+//  IGNITION TRANSPORT LIBRARY TO SEND INFO BY DIRECT IGNITION PUBLISHER
+#include <ignition/transport/Node.hh>
+#include <ignition/msgs/pose.pb.h>
+#include <ignition/msgs/pose_v.pb.h>
+#include <cmath>
 
 
 namespace floating_controller {
@@ -42,8 +47,7 @@ namespace floating_controller {
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber;
         geometry_msgs::msg::Twist twist_command;
 
-        void teleport_robot();
-    
+        ignition::transport::Node ign_node;
     };
 
 } // namespace floating_controller

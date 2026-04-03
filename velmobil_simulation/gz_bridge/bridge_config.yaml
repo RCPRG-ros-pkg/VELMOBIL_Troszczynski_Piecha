@@ -1,3 +1,4 @@
+# NOW ITS NOT REQUIRED
 - ros_topic_name: "/cmd_vel"
   gz_topic_name: "/model/velmobil/cmd_vel"
   ros_type_name: "geometry_msgs/msg/Twist"

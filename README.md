@@ -12,7 +12,7 @@ It's best to run the software with CUDA support.
 What to install:   
 - [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)  
 - [StableBaselines3](https://stable-baselines3.readthedocs.io/en/master/guide/install.html)   
-- [GZ Harmonic](https://gazebosim.org/docs/harmonic/install_ubuntu/)
+- [Ignition Fortress](https://gazebosim.org/docs/fortress/install_ubuntu/)
 
 
 
@@ -40,6 +40,18 @@ source install/setup.bash
 Bare simulation.
 ```bash
 ros2 launch velmobil_simulation simple_velmobil.launch.py
+```
+
+### How to control velmobil
+#### In new terminal with build and source'd environment, paste first or second command.
+First option:
+```bash
+ros2 run teleop_twist_keyboard teleop_twist_keyboard repeat_rate:=50
+```
+
+Second option:
+```bash
+ros2 topic pub  /cmd_vel geometry_msgs/msg/Twist "{linear: {x: <velocity_x>, y: <velocity_y>}, angular: {z: <angular_velocity>}}"
 ```
 
 ## Github Project

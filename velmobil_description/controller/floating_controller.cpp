@@ -11,15 +11,7 @@
 #include "geometry_msgs/msg/twist.hpp"
 
 
-/*
-BEST TUTORIAL EVER:
-    https://github.com/masum919/my_custom_controller/tree/main
-
-NEED TO PUT THIS STUFF INTO SOME DOCS... instead of writing comments in code
-*/
-
-
-// WHAT IT DOES: it publisher vx, vy, omega, BUT gz cannot handle that planar kinematics. So it actualy publishes Kinematic TF.
+// IT PUBLISHES VX, VY, OMEGA TO IGNITION DIRECTLY
 
 namespace floating_controller {
 
@@ -33,7 +25,7 @@ namespace floating_controller {
             RCLCPP_INFO(get_node()->get_logger(), "FloatingController initialized");
 
         } catch (const std::exception & e) {
-            fprintf(stderr, "Exception thrown during init: %s \n", e.what());
+            RCLCPP_ERROR(get_node()->get_logger(), "Exception thrown during init: %s \n", e.what());
             return controller_interface::CallbackReturn::ERROR;
         }
 
@@ -50,7 +42,6 @@ namespace floating_controller {
 
         // Create the subscriber for Twist messages
         cmd_vel_subscriber = get_node()->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, callback); 
-
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController configured. Subscribed to /cmd_vel.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -60,7 +51,7 @@ namespace floating_controller {
         config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
         config.names.reserve(joint_names.size());
 
-        for (const auto& joint_name : joint_names) {
+        for (const auto & joint_name : joint_names){
             config.names.push_back(joint_name + "/" + interface_name);
         }
         return config;
@@ -70,8 +61,8 @@ namespace floating_controller {
         controller_interface::InterfaceConfiguration config;
         config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
         config.names.reserve(joint_names.size() * 2); // Velocity and Position
-
-        for (const auto& joint_name : joint_names) {
+        
+        for (const auto & joint_name : joint_names) {
             config.names.push_back(joint_name + "/" + hardware_interface::HW_IF_VELOCITY);
             config.names.push_back(joint_name + "/" + hardware_interface::HW_IF_POSITION);
         }
@@ -85,61 +76,50 @@ namespace floating_controller {
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    controller_interface::return_type FloatingController::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & period) {
-        // Extract linear and angular velocity commands from Twist message
-        double vx_linear  = twist_command.linear.x; // Vx
-        double vy_linear  = twist_command.linear.y; // Vy
-        double omega = twist_command.angular.z; // omega
-
-        const double rad_per_sec_to_rpm = 60.0 / (2.0 * M_PI);
-
-        double dt = period.seconds();
-        // Convert linear velocity from mm/s to m/s
-        theta += omega * rad_per_sec_to_rpm; // theta state
-
-        x += (vx_linear*cos(theta) - vy_linear*sin(theta)) * dt; // x state
-        y += (vx_linear*sin(theta) + vy_linear*cos(theta)) * dt; // y state
-
-
-        RCLCPP_DEBUG(get_node()->get_logger(), "Calculated State: x=%.2f, y=%.2f, theta=%.2f", x, y, theta);
-
-
-        if (command_interfaces_.size() >= 0) {
-
-            RCLCPP_DEBUG(get_node()->get_logger(),
-                        "Sent commands: vx=%.3f, vy=%.3f, omega=%.3f",
-                        vx_linear, vy_linear, omega);
-        } else {
-            RCLCPP_ERROR(get_node()->get_logger(),
-                        "Insufficient command interfaces");
-            return controller_interface::return_type::ERROR;
-        }
-
-        teleport_robot();
-
-        return controller_interface::return_type::OK;
-    }
-
-
-    controller_interface::CallbackReturn FloatingController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) {
+    controller_interface::CallbackReturn FloatingController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
+    {
+        for (auto & cmd_if : command_interfaces_)
+            cmd_if.set_value(0.0);
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController deactivated. Motors set to zero.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    void FloatingController::teleport_robot() {
-        std::stringstream cmd;
+    controller_interface::return_type FloatingController::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
+    {
+        double vx_linear  = twist_command.linear.x; // Vx
+        double vy_linear  = twist_command.linear.y; // Vy
+        double omega = twist_command.angular.z; // omega
+        double dt    = period.seconds();
 
-        cmd << "ign service "
-            << "-s /world/empty/set_pose "
-            << "--reqtype ignition.msgs.Pose "
-            << "--reptype ignition.msgs.Boolean "
-            << "--timeout 2000 "
-            << "--req 'name: \"velmobil\", position: {x: " << x << ", y: " << y <<", z: 0.0}'";
+        theta += omega * dt;
+        
+        x += (vx_linear * std::cos(theta) - vy_linear * std::sin(theta)) * dt;
+        y += (vx_linear * std::sin(theta) + vy_linear * std::cos(theta)) * dt;
 
+        for (auto & cmd_if : command_interfaces_)
+            cmd_if.set_value(0.0);
 
-        std::system((cmd.str() + " > /dev/null").c_str());
+        ignition::msgs::Pose request;
+        ignition::msgs::Boolean response;
+        bool result;
+
+        request.set_name("velmobil");
+        request.mutable_position()->set_x(x);
+        request.mutable_position()->set_y(y);
+        request.mutable_position()->set_z(0.0);
+        request.mutable_orientation()->set_x(0.0);
+        request.mutable_orientation()->set_y(0.0);
+        request.mutable_orientation()->set_z(std::sin(theta / 2.0));
+        request.mutable_orientation()->set_w(std::cos(theta / 2.0));
+
+        bool executed = ign_node.Request("/world/empty/set_pose", request, 100, response, result);
+
+        if (!executed || !result) {
+            RCLCPP_WARN_THROTTLE(get_node() -> get_logger(), *get_node() -> get_clock(), 2000, "set_pose request failed");
+        }
+
+        return controller_interface::return_type::OK;
     }
-
 
 } // namespace floating_controller
 
