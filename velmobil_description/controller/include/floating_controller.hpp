@@ -45,6 +45,7 @@ namespace floating_controller {
         double theta;
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber;
+        std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
         geometry_msgs::msg::Twist twist_command;
 
         ignition::transport::Node ign_node;

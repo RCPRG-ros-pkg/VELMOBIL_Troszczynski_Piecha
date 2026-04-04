@@ -42,6 +42,7 @@ namespace floating_controller {
 
         // Create the subscriber for Twist messages
         cmd_vel_subscriber = get_node()->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, callback); 
+        tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(get_node());
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController configured. Subscribed to /cmd_vel.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -72,6 +73,27 @@ namespace floating_controller {
     controller_interface::CallbackReturn FloatingController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/) {
         twist_command = geometry_msgs::msg::Twist();
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController activated.");
+        
+        // SET INITIAL POSE IN ORDER TO AVOID SIMULATOR CRASH 
+        x = 0.0; 
+        y = 0.0; 
+        theta = 0.0;
+        ignition::msgs::Pose req;
+        ignition::msgs::Boolean rep;
+        bool result;
+
+        req.set_name("velmobil");
+        req.mutable_position()->set_x(0.0);
+        req.mutable_position()->set_y(0.0);
+        req.mutable_position()->set_z(0.0);
+        req.mutable_orientation()->set_x(0.0);
+        req.mutable_orientation()->set_y(0.0);
+        req.mutable_orientation()->set_z(0.0);
+        req.mutable_orientation()->set_w(1.0);
+
+        ign_node.Request("/world/empty/set_pose", req, 1000, rep, result);
+
+        RCLCPP_INFO(get_node() -> get_logger(), "FloatingController activated");
 
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -84,17 +106,32 @@ namespace floating_controller {
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    controller_interface::return_type FloatingController::update(const rclcpp::Time & /*time*/, const rclcpp::Duration & period)
+    controller_interface::return_type FloatingController::update(const rclcpp::Time & time, const rclcpp::Duration & period)
     {
         double vx_linear  = twist_command.linear.x; // Vx
         double vy_linear  = twist_command.linear.y; // Vy
         double omega = twist_command.angular.z; // omega
-        double dt    = period.seconds();
+        double dt = period.seconds();
 
         theta += omega * dt;
         
         x += (vx_linear * std::cos(theta) - vy_linear * std::sin(theta)) * dt;
         y += (vx_linear * std::sin(theta) + vy_linear * std::cos(theta)) * dt;
+
+        geometry_msgs::msg::TransformStamped tf_msg;
+        tf_msg.header.stamp = time;
+        tf_msg.header.frame_id = "odom";
+        tf_msg.child_frame_id  = "base_footprint";
+
+        tf_msg.transform.translation.x = x;
+        tf_msg.transform.translation.y = y;
+        tf_msg.transform.translation.z = 0.0;
+        tf_msg.transform.rotation.x = 0.0;
+        tf_msg.transform.rotation.y = 0.0;
+        tf_msg.transform.rotation.z = std::sin(theta / 2.0);
+        tf_msg.transform.rotation.w = std::cos(theta / 2.0);
+
+        tf_broadcaster -> sendTransform(tf_msg);
 
         for (auto & cmd_if : command_interfaces_)
             cmd_if.set_value(0.0);
