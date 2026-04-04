@@ -16,7 +16,7 @@
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include "geometry_msgs/msg/twist.hpp"
 
-//  IGNITION TRANSPORT LIBRARY TO SEND INFO BY DIRECT IGNITION PUBLISHER
+//  IGNITION TRANSPORT LIBRARY TO SEND INFO BY DIRECT IGNITION NODE
 #include <ignition/transport/Node.hh>
 #include <ignition/msgs/pose.pb.h>
 #include <ignition/msgs/pose_v.pb.h>
@@ -35,6 +35,12 @@ namespace floating_controller {
         controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state) override;
         controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
         controller_interface::return_type update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
+
+        bool send_command_to_simulator(ignition::msgs::Pose & req, ignition::msgs::Boolean & rep,
+            bool & result, double timeout, double _x, double _y, double _theta);
+        
+        void send_tfs_to_rviz(geometry_msgs::msg::TransformStamped & tf_msg, const rclcpp::Time & time,
+            double _x, double _y, double _theta);
 
     protected:
         std::vector<std::string> joint_names;

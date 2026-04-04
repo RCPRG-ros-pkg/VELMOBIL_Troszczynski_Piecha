@@ -78,30 +78,21 @@ namespace floating_controller {
         x = 0.0; 
         y = 0.0; 
         theta = 0.0;
-        ignition::msgs::Pose req;
-        ignition::msgs::Boolean rep;
+        ignition::msgs::Pose request;
+        ignition::msgs::Boolean response;
         bool result;
 
-        req.set_name("velmobil");
-        req.mutable_position()->set_x(0.0);
-        req.mutable_position()->set_y(0.0);
-        req.mutable_position()->set_z(0.0);
-        req.mutable_orientation()->set_x(0.0);
-        req.mutable_orientation()->set_y(0.0);
-        req.mutable_orientation()->set_z(0.0);
-        req.mutable_orientation()->set_w(1.0);
+        bool executed = send_command_to_simulator(request, response, result, 1000, x, y, theta);
 
-        ign_node.Request("/world/empty/set_pose", req, 1000, rep, result);
-
-        RCLCPP_INFO(get_node() -> get_logger(), "FloatingController activated");
+        if (executed && result){
+            RCLCPP_INFO(get_node() -> get_logger(), "FloatingController activated");
+        }
 
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     controller_interface::CallbackReturn FloatingController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
     {
-        for (auto & cmd_if : command_interfaces_)
-            cmd_if.set_value(0.0);
         RCLCPP_INFO(get_node()->get_logger(), "FloatingController deactivated. Motors set to zero.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
@@ -119,43 +110,54 @@ namespace floating_controller {
         y += (vx_linear * std::sin(theta) + vy_linear * std::cos(theta)) * dt;
 
         geometry_msgs::msg::TransformStamped tf_msg;
-        tf_msg.header.stamp = time;
-        tf_msg.header.frame_id = "odom";
-        tf_msg.child_frame_id  = "base_footprint";
 
-        tf_msg.transform.translation.x = x;
-        tf_msg.transform.translation.y = y;
-        tf_msg.transform.translation.z = 0.0;
-        tf_msg.transform.rotation.x = 0.0;
-        tf_msg.transform.rotation.y = 0.0;
-        tf_msg.transform.rotation.z = std::sin(theta / 2.0);
-        tf_msg.transform.rotation.w = std::cos(theta / 2.0);
-
-        tf_broadcaster -> sendTransform(tf_msg);
-
-        for (auto & cmd_if : command_interfaces_)
-            cmd_if.set_value(0.0);
+        send_tfs_to_rviz(tf_msg, time, x, y, theta);
 
         ignition::msgs::Pose request;
         ignition::msgs::Boolean response;
         bool result;
 
-        request.set_name("velmobil");
-        request.mutable_position()->set_x(x);
-        request.mutable_position()->set_y(y);
-        request.mutable_position()->set_z(0.0);
-        request.mutable_orientation()->set_x(0.0);
-        request.mutable_orientation()->set_y(0.0);
-        request.mutable_orientation()->set_z(std::sin(theta / 2.0));
-        request.mutable_orientation()->set_w(std::cos(theta / 2.0));
-
-        bool executed = ign_node.Request("/world/empty/set_pose", request, 100, response, result);
+        bool executed = send_command_to_simulator(request, response, result, 100, x, y, theta);
 
         if (!executed || !result) {
             RCLCPP_WARN_THROTTLE(get_node() -> get_logger(), *get_node() -> get_clock(), 2000, "set_pose request failed");
         }
 
         return controller_interface::return_type::OK;
+    }
+
+    bool FloatingController::send_command_to_simulator(ignition::msgs::Pose & req, ignition::msgs::Boolean & rep,
+            bool & result, double timeout, double _x, double _y, double _theta){
+
+        req.set_name("velmobil");
+        req.mutable_position()->set_x(_x);
+        req.mutable_position()->set_y(_y);
+        req.mutable_position()->set_z(0.0);
+        req.mutable_orientation()->set_x(0.0);
+        req.mutable_orientation()->set_y(0.0);
+        req.mutable_orientation()->set_z(std::sin(_theta / 2.0));
+        req.mutable_orientation()->set_w(std::cos(_theta / 2.0));
+
+        bool executed = ign_node.Request("/world/empty/set_pose", req, timeout, rep, result);
+        return executed;
+    }
+
+    void FloatingController::send_tfs_to_rviz(geometry_msgs::msg::TransformStamped & tf_msg, const rclcpp::Time & time,
+            double _x, double _y, double _theta){
+
+        tf_msg.header.stamp = time;
+        tf_msg.header.frame_id = "odom";
+        tf_msg.child_frame_id  = "base_footprint";
+
+        tf_msg.transform.translation.x = _x;
+        tf_msg.transform.translation.y = _y;
+        tf_msg.transform.translation.z = 0.0;
+        tf_msg.transform.rotation.x = 0.0;
+        tf_msg.transform.rotation.y = 0.0;
+        tf_msg.transform.rotation.z = std::sin(_theta / 2.0);
+        tf_msg.transform.rotation.w = std::cos(_theta / 2.0);
+
+        tf_broadcaster -> sendTransform(tf_msg);
     }
 
 } // namespace floating_controller

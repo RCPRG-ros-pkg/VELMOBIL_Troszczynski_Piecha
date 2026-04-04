@@ -33,11 +33,13 @@ def generate_launch_description():
         'rviz',
         'basic.rviz'
     ])
-    bridge_config = PathJoinSubstitution([
-        velmobil_simulation,
-        'gz_bridge',
-        'bridge_config.yaml'
-    ])
+
+    #   NOW, IT'S NOT USEFULL
+    # bridge_config = PathJoinSubstitution([
+    #     velmobil_simulation,
+    #     'gz_bridge',
+    #     'bridge_config.yaml'
+    # ])
     robot_controller_mecanum = PathJoinSubstitution([
         velmobil_description,
         'control_config',
@@ -113,12 +115,13 @@ def generate_launch_description():
         condition=IfCondition(floating) 
     )
 
-    bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        arguments=[bridge_config],
-        output='screen'
-    )
+    #   NOW, IT'S NOT USEFULL
+    # bridge = Node(
+    #     package='ros_gz_bridge',
+    #     executable='parameter_bridge',
+    #     arguments=[bridge_config],
+    #     output='screen'
+    # )
 
     rviz_node = Node(
         package='rviz2',
@@ -192,7 +195,8 @@ def generate_launch_description():
             )
         ),
         
-        bridge,
+    #   NOW, IT'S NOT USEFULL
+        # bridge,
         robot_state_publisher,
         gz_spawn_entity,
         rviz_node,

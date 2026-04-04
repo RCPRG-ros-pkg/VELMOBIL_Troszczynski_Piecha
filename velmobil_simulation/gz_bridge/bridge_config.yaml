@@ -1,4 +1,4 @@
-# NOW ITS NOT REQUIRED
+# NOW ITS NOT REQUIRED - UNCOMMENT PARTICULAR LINES IN LAUNCH FILE 
 - ros_topic_name: "/cmd_vel"
   gz_topic_name: "/model/velmobil/cmd_vel"
   ros_type_name: "geometry_msgs/msg/Twist"
