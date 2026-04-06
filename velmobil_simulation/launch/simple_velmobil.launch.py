@@ -115,7 +115,10 @@ def generate_launch_description():
         arguments=[
             '/right/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
             '/left/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU'
+            '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU',
+            '/depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
+            '/depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
+            '/depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
         ],
         parameters=[{'use_sim_time': True}],
         output='screen'

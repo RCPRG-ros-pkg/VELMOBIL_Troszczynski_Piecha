@@ -67,8 +67,9 @@
   <xacro:lidar name="left" side="1" yaw="0.0" />
   <xacro:lidar name="right" side="-1" yaw="-3.141592" />
 
-
   <xacro:imu />
+
+  <xacro:real_sense />
 
 
 
