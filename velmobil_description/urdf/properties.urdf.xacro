@@ -5,6 +5,15 @@
     <material name="black"><color rgba="0 0 0 1.0"/></material>
     <material name="white"><color rgba="1 1 1 1.0"/></material>
 
+    <xacro:property name="base_mass" value="60"/>
+    <xacro:property name="front_mass" value="15"/>
+    <xacro:property name="wheel_mass" value="1.6"/>
+
+
+    <xacro:property name="base_z_offset" value="0.1035"/>
+    <xacro:property name="base_link_center_offset" value="${base_z_offset - 0.019}"/>
+    <xacro:property name="base_center_offset" value="-0.081"/>
+    <xacro:property name="front_base_offset" value="0.445"/>
     <xacro:property name="wheel_radius" value="0.1016"/>
     <xacro:property name="lidar_l_centre_offset" value="0 0.3 0.176"/>
     <xacro:property name="lidar_l_orientation" value="0 0 0"/>
@@ -12,9 +21,9 @@
     <xacro:property name="lidar_r_orientation" value="0 0 -3.141592"/>
     <xacro:property name="imu_centre_ofset" value="0 0 0"/>
     <xacro:property name="wheel_y_offset" value="0.38"/>
-    <xacro:property name="wheel_centre_x_offset" value="0.36"/>
-    <xacro:property name="wheel_r_base_x_offset" value="${-wheel_centre_x_offset + 0.081}"/>
-    <xacro:property name="wheel_f_front_x_offset" value="${0.445 - 0.081 - wheel_centre_x_offset}"/>
+    <xacro:property name="wheel_center_x_offset" value="0.36"/>
+    <xacro:property name="wheel_r_base_x_offset" value="${-wheel_center_x_offset + 0.081}"/>
+    <xacro:property name="wheel_f_front_x_offset" value="${0.445 - 0.081 - wheel_center_x_offset}"/>
     <xacro:property name="wheel_base_offset" value="0.05"/>
 
 

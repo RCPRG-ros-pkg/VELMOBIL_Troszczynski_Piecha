@@ -16,6 +16,7 @@
       <geometry>
         <mesh filename="file://$(find velmobil_description)/models/base.dae" />
       </geometry>
+      <material name="orange"/>
     </visual>
     <inertial>
       <origin xyz="0 0 0.5" rpy="0 0 0"/>
@@ -23,16 +24,38 @@
       <inertia ixx="0.13" ixy="0.0" ixz="0.0" iyy="0.42" iyz="0.0" izz="0.48"/>
     </inertial>
   </link>
+  <link name="front_link">
+      <visual>
+          <geometry>
+              <mesh filename="file://$(find velmobil_description)/models/front.dae"/>
+          </geometry>
+          <material name="orange"/>
+      </visual>
+      <collision>
+          <geometry>
+              <mesh filename="file://$(find velmobil_description)/models/front.dae"/>
+          </geometry>
+      </collision>
+      <inertial>
+          <mass value="${front_mass}"/>
+          <inertia ixx="0.7351" ixy="0.0" ixz="0.0" iyy="0.0771" iyz="0.0" izz="0.7483"/>
+      </inertial>
+  </link>
   <joint name="footprint_joint" type="fixed">
-      <origin xyz="0 0 ${wheel_radius + wheel_base_offset}" rpy="0 0 0"/>
+      <origin xyz="${base_center_offset} 0 ${base_link_center_offset + 0.03}" rpy="0 0 0"/>
       <parent link="base_footprint"/>
       <child link="base_link"/>
   </joint>
+  <joint name="front_joint" type="fixed">
+      <origin xyz="${front_base_offset} 0 0" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="front_link"/>
+  </joint>
 
-  <xacro:wheel prefix="front_left" x="0.5" y="${wheel_y_offset}"/>
-  <xacro:wheel prefix="front_right" x="0.5" y="${-wheel_y_offset}"/>
-  <xacro:wheel prefix="rear_left" x="-0.5" y="${wheel_y_offset}"/>
-  <xacro:wheel prefix="rear_right" x="-0.5" y="${-wheel_y_offset}"/>
+  <xacro:wheel prefix="front_left" x="${front_base_offset}" y="${wheel_y_offset}"/>
+  <xacro:wheel prefix="front_right" x="${front_base_offset}" y="${-wheel_y_offset}"/>
+  <xacro:wheel prefix="rear_left" x="${wheel_r_base_x_offset}" y="${wheel_y_offset}"/>
+  <xacro:wheel prefix="rear_right" x="${wheel_r_base_x_offset}" y="${-wheel_y_offset}"/>
 
 
   <xacro:wheel_friction prefix="front_left" dir="1"/>
