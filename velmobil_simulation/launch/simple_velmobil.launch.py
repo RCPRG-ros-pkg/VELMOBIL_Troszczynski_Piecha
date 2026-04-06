@@ -34,12 +34,6 @@ def generate_launch_description():
         'basic.rviz'
     ])
 
-    #   NOW, IT'S NOT USEFULL
-    # bridge_config = PathJoinSubstitution([
-    #     velmobil_simulation,
-    #     'gz_bridge',
-    #     'bridge_config.yaml'
-    # ])
     robot_controller_mecanum = PathJoinSubstitution([
         velmobil_description,
         'control_config',
@@ -115,13 +109,17 @@ def generate_launch_description():
         condition=IfCondition(floating) 
     )
 
-    #   NOW, IT'S NOT USEFULL
-    # bridge = Node(
-    #     package='ros_gz_bridge',
-    #     executable='parameter_bridge',
-    #     arguments=[bridge_config],
-    #     output='screen'
-    # )
+    bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=[
+            '/right/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
+            '/left/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
+            '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU'
+        ],
+        parameters=[{'use_sim_time': True}],
+        output='screen'
+    )
 
     rviz_node = Node(
         package='rviz2',
@@ -195,8 +193,7 @@ def generate_launch_description():
             )
         ),
         
-    #   NOW, IT'S NOT USEFULL
-        # bridge,
+        bridge,
         robot_state_publisher,
         gz_spawn_entity,
         rviz_node,

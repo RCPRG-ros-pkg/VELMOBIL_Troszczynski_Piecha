@@ -65,6 +65,141 @@
         </joint>
     </xacro:macro>
 
+    <xacro:macro name="lidar" params="name side yaw">
+        <link name="${name}_lidar_link">
+            <visual>
+                <geometry>
+                    <cylinder radius="${lidar_radius}" length="${lidar_length}"/>
+                </geometry>
+                <origin xyz="0 0 -0.02"/>
+                <material name="black"/>
+            </visual>
+            <collision>
+                <geometry>
+                    <cylinder radius="${lidar_radius}" length="${lidar_length}"/>
+                </geometry>
+            </collision>
+            <inertial>
+                <mass value="0.1"/>
+                <inertia ixx="0.00283314166" ixy="0.0" ixz="0.0" iyy="0.00283314166" iyz="0.0" izz="0.00143055"/>
+            </inertial>
+        </link>
+
+        <joint name="${name}_lidar_base_joint" type="fixed">
+            <parent link="base_link"/>
+            <child link="${name}_lidar_link"/>
+            <origin xyz="${-base_center_offset} ${side * lidar_y_offset} 0.176" rpy="0 0 ${yaw}"/>
+        </joint>
+
+        <gazebo reference="${name}_lidar_link">
+            <sensor name="${name}_lidar_sensor" type="gpu_lidar">
+                <ignition_frame_id>${name}_lidar_link</ignition_frame_id>
+                <pose relative_to='${name}_lidar_link'>0 0 0 0 0 0</pose>
+                <topic>/${name}/scan</topic>
+                <update_rate>50</update_rate>
+                <ray>
+                    <scan>
+                        <horizontal>
+                            <samples>540</samples>
+                            <resolution>1</resolution>
+                            <min_angle>-0.7853982</min_angle>
+                            <max_angle>3.926991</max_angle>
+                        </horizontal>
+                    </scan>
+                    <range>
+                        <min>0.06</min>
+                        <max>20</max>
+                        <resolution>0.01</resolution>
+                    </range>
+                    <noise>
+                        <type>gaussian</type>
+                        <mean>0.0</mean>
+                        <stddev>0.012</stddev>
+                    </noise>
+                </ray>
+                <always_on>1</always_on>
+                <visualize>1</visualize>
+                
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+
+
+    <xacro:macro name="imu" params="">
+        <link name="imu_link" />
+        <joint name="imu_base_link" type="fixed">
+            <parent link="base_link"/>
+            <child link="imu_link"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </joint>
+
+        <gazebo reference="imu_link">
+            <sensor name="imu_sensor" type="imu">
+                <ignition_frame_id>imu_link</ignition_frame_id>
+                <pose relative_to='imu_link'>0 0 0 0 0 0</pose>
+                <always_on>1</always_on>
+                <update_rate>1</update_rate>
+                <visualize>false</visualize>
+                <imu>
+                    <angular_velocity>
+                        <x>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                                <bias_mean>0.0000075</bias_mean>
+                                <bias_stddev>0.0000008</bias_stddev>
+                            </noise>
+                        </x>
+                        <y>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                                <bias_mean>0.0000075</bias_mean>
+                                <bias_stddev>0.0000008</bias_stddev>
+                            </noise>
+                        </y>
+                        <z>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                                <bias_mean>0.0000075</bias_mean>
+                                <bias_stddev>0.0000008</bias_stddev>
+                            </noise>
+                        </z>
+                    </angular_velocity>
+                    <linear_acceleration>
+                        <x>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>1.7e-2</stddev>
+                                <bias_mean>0.1</bias_mean>
+                                <bias_stddev>0.001</bias_stddev>
+                            </noise>
+                        </x>
+                        <y>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>1.7e-2</stddev>
+                                <bias_mean>0.1</bias_mean>
+                                <bias_stddev>0.001</bias_stddev>
+                            </noise>
+                        </y>
+                        <z>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>1.7e-2</stddev>
+                                <bias_mean>0.1</bias_mean>
+                                <bias_stddev>0.001</bias_stddev>
+                            </noise>
+                        </z>
+                    </linear_acceleration>
+                </imu>
+                <topic>/imu/data</topic>
+            </sensor>
+        </gazebo>
+    </xacro:macro>
+
+
 
 
 </robot>

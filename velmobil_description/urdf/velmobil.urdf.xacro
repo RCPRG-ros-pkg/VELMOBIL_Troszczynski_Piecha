@@ -63,6 +63,20 @@
   <xacro:wheel_friction prefix="rear_left" dir="-1"/>
   <xacro:wheel_friction prefix="rear_right" dir="1"/>
 
+
+  <xacro:lidar name="left" side="1" yaw="0.0" />
+  <xacro:lidar name="right" side="-1" yaw="-3.141592" />
+
+
+  <xacro:imu />
+
+
+
+
+
+
+
+
   <ros2_control name="GazeboSimSystem" type="system">
     <hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware>
     <xacro:joint_interface name="front_left_wheel_joint"/>
@@ -70,6 +84,8 @@
     <xacro:joint_interface name="rear_left_wheel_joint"/>
     <xacro:joint_interface name="rear_right_wheel_joint"/>
   </ros2_control>
+
+
 
 
   <xacro:if value="$(arg floating)">
@@ -90,6 +106,7 @@
       </plugin>
     </gazebo>
   </xacro:unless>
+
 
 
 </robot>

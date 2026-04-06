@@ -4,8 +4,6 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Status1
         - /RobotModel1/Description Topic1
       Splitter Ratio: 0.5
     Tree Height: 631
@@ -26,7 +24,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: LeftLaserScan
 Visualization Manager:
   Class: ""
   Displays:
@@ -90,12 +88,22 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        left_lidar_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
         rear_left_wheel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
         rear_right_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        right_lidar_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -123,11 +131,15 @@ Visualization Manager:
           Value: true
         front_right_wheel:
           Value: true
+        left_lidar_link:
+          Value: true
         odom:
           Value: true
         rear_left_wheel:
           Value: true
         rear_right_wheel:
+          Value: true
+        right_lidar_link:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -144,11 +156,83 @@ Visualization Manager:
                 {}
               front_right_wheel:
                 {}
+              left_lidar_link:
+                {}
               rear_left_wheel:
                 {}
               rear_right_wheel:
                 {}
+              right_lidar_link:
+                {}
       Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 0
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: LeftLaserScan
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /left/scan
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/LaserScan
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 0
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: RightLaserScan
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /right/scan
+      Use Fixed Frame: true
+      Use rainbow: true
       Value: true
   Enabled: true
   Global Options:
@@ -196,25 +280,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.6235296726226807
+      Distance: 4.7908453941345215
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.25209513306617737
-        Y: 0.2836794853210449
-        Z: 0.437349796295166
+        X: 0.15051494538784027
+        Y: -0.13365989923477173
+        Z: 0.31342414021492004
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.3503982722759247
+      Pitch: 1.0553982257843018
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.015371084213257
+      Yaw: 3.3504128456115723
     Saved: ~
 Window Geometry:
   Displays:
