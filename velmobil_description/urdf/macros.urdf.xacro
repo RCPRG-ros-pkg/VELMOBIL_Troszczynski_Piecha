@@ -74,7 +74,7 @@
     </xacro:macro>
 
 
-    <!-- TWO CAMERAS SHOULD ARE SET FOR EVEN OPTIMAL WORKING WHILE SIMULATION -->
+    <!-- TWO CAMERAS PARAMETERS ARE SET IN ORDER TO WORK MORE EFFECTIVELY IN SIMULATION -->
     <xacro:macro name="front_real_sense" params="">
         <joint name="front_rgbd_camera_joint" type="fixed">
             <origin xyz="${-base_center_offset + 0.2} 0 0.14" rpy="0 0 0"/>
