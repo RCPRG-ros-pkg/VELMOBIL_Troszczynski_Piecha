@@ -8,16 +8,18 @@
 
   <link name="base_footprint" />
   <link name="base_link">
-    <collision>
-      <origin xyz="0 0 0.5" rpy="0 0 0"/>
-      <geometry><box size="0.1 0.1 0.1"/></geometry>  <!-- mock colision -->
-    </collision>
     <visual>
       <geometry>
         <mesh filename="file://$(find velmobil_description)/models/base.dae" />
       </geometry>
       <material name="orange"/>
     </visual>
+    <collision>
+      <origin xyz="0 -0.011 0.001" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_link_width} ${base_link_height} ${base_link_depth}"/>
+      </geometry>
+    </collision>
     <inertial>
       <origin xyz="0 0 0.5" rpy="0 0 0"/>
       <mass value="0.5"/>
@@ -32,8 +34,9 @@
           <material name="orange"/>
       </visual>
       <collision>
+          <origin xyz="0.0 0.003 0.002" rpy="0.0 0.0 1.57"/>
           <geometry>
-              <mesh filename="file://$(find velmobil_description)/models/front.dae"/>
+              <box size="0.6736 0.1906 0.1600"/>
           </geometry>
       </collision>
       <inertial>
@@ -69,13 +72,35 @@
 
   <xacro:imu />
 
-  <xacro:real_sense />
+  <link name="camera_link">
+    <collision>
+        <origin xyz="${-base_center_offset} 0 0" rpy="0 0 1.57"/>
+        <geometry>
+            <box size="0.1 0.2 0.2"/>
+        </geometry>
+    </collision>
+    <visual>
+        <origin xyz="${-base_center_offset} 0 0" rpy="0 0 1.57"/>
+        <geometry>
+            <box size="0.2 0.38 0.3"/>
+        </geometry>
+        <material name="orange"/>
+    </visual>
+    <inertial>
+        <mass value="5.0"/>
+        <inertia ixx="0.1" ixy="0.0" ixz="0.0"
+                 iyy="0.1" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
 
+  <joint name="base_camera_link" type="fixed">
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
+      <parent link="base_link"/>
+      <child link="camera_link"/>
+  </joint>
 
-
-
-
-
+  <xacro:front_real_sense />
+  <xacro:back_real_sense />
 
 
   <ros2_control name="GazeboSimSystem" type="system">

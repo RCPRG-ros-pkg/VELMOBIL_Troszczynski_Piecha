@@ -28,6 +28,14 @@
         </joint>
     </xacro:macro>
 
+    <xacro:macro name="camera_link_camera_joint" params="prefix">
+        <joint name="${prefix}_camera_link_camera_joint" type="fixed">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <parent link="camera_link"/>
+            <child link="${prefix}_rgbd_camera_frame"/>
+        </joint>
+    </xacro:macro>
+
     <xacro:macro name="wheel_friction" params="prefix dir">
         <gazebo reference="${prefix}_wheel">
             <collision>
@@ -65,13 +73,15 @@
         </joint>
     </xacro:macro>
 
-    <xacro:macro name="real_sense" params="">
-        <joint name="rgbd_camera_joint" type="fixed">
-            <origin xyz="0.45 0 0.09" rpy="0 0 0"/>
-            <parent link="base_link"/>
-            <child link="rgbd_camera_frame"/>
+
+    <!-- TWO CAMERAS SHOULD ARE SET FOR EVEN OPTIMAL WORKING WHILE SIMULATION -->
+    <xacro:macro name="front_real_sense" params="">
+        <joint name="front_rgbd_camera_joint" type="fixed">
+            <origin xyz="${-base_center_offset + 0.2} 0 0.14" rpy="0 0 0"/>
+            <parent link="camera_link"/>
+            <child link="front_rgbd_camera_frame"/>
         </joint>
-        <link name="rgbd_camera_frame">
+        <link name="front_rgbd_camera_frame">
         <visual>
             <origin xyz="0 0 0" rpy="0 0 0"/>
             <geometry>
@@ -83,53 +93,67 @@
         </visual>
         </link>
 
-        <gazebo reference="rgbd_camera_frame">
-        <sensor name="rgbd_camera" type="rgbd_camera">
-            <ignition_frame_id>rgbd_camera_frame</ignition_frame_id>
-            <camera name="rgbd_camera_frame">
-            <horizontal_fov>1.3962634</horizontal_fov>
-            <lens>
-                <intrinsics>
-                <fx>277.1</fx>
-                <fy>277.1</fy>
-                <cx>160.5</cx>
-                <cy>120.5</cy>
-                <s>0</s>
-                </intrinsics>
-            </lens>
-            <distortion>
-                <k1>0.104207</k1>
-                <k2>-0.255558</k2>
-                <k3>0.128694</k3>
-                <p1>0.000512</p1>
-                <p2>0.000319</p2>
-                <center>0.5 0.5</center>
-            </distortion>
+        <gazebo reference="front_rgbd_camera_frame">
+        <sensor name="front_rgbd_camera" type="rgbd_camera">
+            <ignition_frame_id>front_rgbd_camera_frame</ignition_frame_id>
+            <camera name="front_rgbd_camera_frame">
+            <horizontal_fov>1.094321441</horizontal_fov>
             <image>
-                <width>1280</width>
-                <height>720</height>
-                <format>L8</format>
+                <width>320</width>
+                <height>180</height>
+                <format>R8G8B8</format>
             </image>
             <clip>
-                <near>0.01</near>
-                <far>300</far>
+                <near>0.4</near>
+                <far>6.5</far>
             </clip>
-            <depth_camera>
-                <clip>
-                <near>0.1</near>
-                <far>10</far>
-                </clip>
-            </depth_camera>
-            <noise>
-                <type>gaussian</type>
-                <mean>0</mean>
-                <stddev>0.003</stddev>
-            </noise>
             </camera>
             <always_on>1</always_on>
             <update_rate>10</update_rate>
             <visualize>0</visualize>
-            <topic>depth_camera</topic>
+            <topic>front_depth_camera</topic>
+        </sensor>
+        </gazebo>
+    </xacro:macro>
+
+
+    <xacro:macro name="back_real_sense" params="">
+        <joint name="back_rgbd_camera_joint" type="fixed">
+            <origin xyz="${-base_center_offset - 0.2} 0 0.14" rpy="0 0 -3.14"/>
+            <parent link="camera_link"/>
+            <child link="back_rgbd_camera_frame"/>
+        </joint>
+        <link name="back_rgbd_camera_frame">
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+            <mesh filename="file://$(find velmobil_description)/models/real_sense.dae" scale="1.0 1.0 1.0"/>
+            </geometry>
+            <material name="black">
+            <color rgba="0.9 0.9 0.9 1.0"/>
+            </material>
+        </visual>
+        </link>
+
+        <gazebo reference="back_rgbd_camera_frame">
+        <sensor name="back_rgbd_camera" type="rgbd_camera">
+            <ignition_frame_id>back_rgbd_camera_frame</ignition_frame_id>
+            <camera name="back_rgbd_camera_frame">
+            <horizontal_fov>1.094321441</horizontal_fov>
+            <image>
+                <width>320</width>
+                <height>180</height>
+                <format>R8G8B8</format>
+            </image>
+            <clip>
+                <near>0.4</near>
+                <far>6.5</far>
+            </clip>
+            </camera>
+            <always_on>1</always_on>
+            <update_rate>10</update_rate>
+            <visualize>0</visualize>
+            <topic>back_depth_camera</topic>
         </sensor>
         </gazebo>
     </xacro:macro>
