@@ -139,11 +139,17 @@ def generate_launch_description():
         condition=IfCondition(rviz) 
     )
 
-
-
-
-
-
+    lidar_merger = Node(
+        package='ira_laser_tools',
+        executable='laserscan_multi_merger',
+        name='laser_merger',
+        parameters=[{
+            'destination_frame': 'base_link',
+            'scan_destination_topic': '/lidar_fusion',
+            'laserscan_topics': '/left/scan /right/scan'
+        }],
+        output='screen'
+    )
 
 
     # RETURN
@@ -203,4 +209,5 @@ def generate_launch_description():
         robot_state_publisher,
         gz_spawn_entity,
         rviz_node,
+        lidar_merger
     ])

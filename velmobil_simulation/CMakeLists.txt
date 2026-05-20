@@ -7,7 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-
+find_package(ira_laser_tools REQUIRED)
 
 
 install(DIRECTORY
