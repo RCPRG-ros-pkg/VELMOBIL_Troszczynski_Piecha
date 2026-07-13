@@ -1,6 +1,12 @@
 # VELMOBIL_Troszczynski_Piecha
-![](https://img.shields.io/badge/ROS-HUMBLE-blue?style=plastic
-)  
+<p align="left">
+  <img src="https://img.shields.io/badge/ROS-HUMBLE-blue?style=plastic">
+  <img src="https://img.shields.io/badge/Ignition-Fortress-orange?style=plastic">
+  <img src="https://img.shields.io/badge/Stable-Baselines3-blue?style=plastic">
+  <img src="https://img.shields.io/badge/Gym-nasium-black?style=plastic">
+  <img src="https://img.shields.io/badge/Hugging-Face-yellow?style=plastic">
+</p> 
+
 Authors:
 - **Kamil Troszczyński** ([Github](https://github.com/Kamil-Troszczynski), [LinkedIn](https://www.linkedin.com/in/kamil-troszczy%C5%84ski-a962a538a/))
 - **Miłosz Piecha** ([Github](https://github.com/Coffee4Cat), [LinkedIn](https://www.linkedin.com/in/mi%C5%82osz-piecha-06bb20387/))
@@ -15,25 +21,42 @@ What to install:
 - [Ignition Fortress](https://gazebosim.org/docs/fortress/install_ubuntu/)
 
 
-
-
 ## Guidelines
 ### Building Project
-1. Clone repository
+1. Clone repository and build docker image
 ```bash
-source /opt/ros/humble/setup.bash
 git clone https://github.com/RCPRG-ros-pkg/VELMOBIL_Troszczynski_Piecha.git
+```
+
+```bash
 cd VELMOBIL_Troszczynski_Piecha
 ```
-2. Install dependencies
+
 ```bash
-chmod +x dependencies_install.sh
-./dependencies_install.sh
+docker build -t velmobil_simulation:latest .
 ```
-3. Build and source
+
+2. Add permissions to bash script in order to run container and run it
+```bash
+chmod +x docker_launcher.sh
+```
+
+```bash
+./docker_launcher.sh
+```
+
+3. Get into container
+```bash
+docker exec -it velmobil_simulation bash
+```
+
+4. Build and source
 ```bash
 colcon build
-source install/setup.bash
+```
+
+```bash
+source /root/ws/install/setup.bash
 ```
 
 ### Running simulation
@@ -43,7 +66,7 @@ ros2 launch velmobil_simulation simple_velmobil.launch.py
 ```
 
 ### How to control velmobil
-#### In new terminal with build and source'd environment, paste first or second command.
+#### In a new terminal attached to the running container, execute either the first or the second command.
 First option:
 ```bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard repeat_rate:=50
@@ -54,13 +77,20 @@ Second option:
 ros2 topic pub  /cmd_vel geometry_msgs/msg/Twist "{linear: {x: <velocity_x>, y: <velocity_y>}, angular: {z: <angular_velocity>}}"
 ```
 
+### How to exit and stop container
+```bash
+exit
+```
+```bash
+docker stop velmobil_simulation
+```
+
 ## Github Project
 [Here](https://github.com/orgs/RCPRG-ros-pkg/projects/22/views/1) is our Task Board used for progress control/dev logs.
 
 
 ## Future Dev Notes
 1. We will provide docs/dev_logs
-2. Docker might be a future option. At the moment, *dependencies_install.sh* is sufficient.
 
 
 
