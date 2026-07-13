@@ -3,8 +3,6 @@
   <img src="https://img.shields.io/badge/ROS-HUMBLE-blue?style=plastic">
   <img src="https://img.shields.io/badge/Ignition-Fortress-orange?style=plastic">
   <img src="https://img.shields.io/badge/Stable-Baselines3-blue?style=plastic">
-  <img src="https://img.shields.io/badge/Gym-nasium-black?style=plastic">
-  <img src="https://img.shields.io/badge/Hugging-Face-yellow?style=plastic">
 </p> 
 
 Authors:
@@ -17,7 +15,6 @@ This repository contains code used for Velmobil autonomous traversal utilizing R
 It's best to run the software with CUDA support.  
 What to install:   
 - [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)  
-- [StableBaselines3](https://stable-baselines3.readthedocs.io/en/master/guide/install.html)   
 - [Ignition Fortress](https://gazebosim.org/docs/fortress/install_ubuntu/)
 
 
