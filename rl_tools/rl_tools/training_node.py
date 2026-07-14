@@ -15,30 +15,25 @@ from rl_tools.ignition_environment import IgnitionEnvironment
 
 class TrainingNode(Node):
     def __init__(self):
-        super().__init__('RL_RACE_Training', allow_undeclared_parameters=True, 
-                            automatically_declare_parameters_from_overrides=True)
+        super().__init__('training_node', allow_undeclared_parameters=True, automatically_declare_parameters_from_overrides=True)
+
 
 def main(args=None):
     
     rclpy.init()
     node = TrainingNode()
     node.get_logger().info("Training node has been created")
-    
-    home_dir = os.path.expanduser('~')
-    pkg_dir = 'velmobil_simulation'
-    trained_model_dir = os.path.join(home_dir, pkg_dir, 'rl_models')
-    log_dir = os.path.join(home_dir, pkg_dir, 'logs')
+
+    pkg_dir = '/root/ws/src/VELMOBIL_Troszczynski_Piecha/rl_tools'
+    trained_model_dir = os.path.join(pkg_dir, 'rl_models')
+    log_dir = os.path.join(pkg_dir, 'logs')
     
     if not os.path.exists(trained_model_dir):
         os.makedirs(trained_model_dir)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
         
-    register(
-    id='RacingBotEnv-v0',
-    entry_point='rl_tools.ignition_environment:IgnitionEnvironment',
-    max_episode_steps=1000,
-    )
+    register(id='RacingBotEnv-v0', entry_point='rl_tools.ignition_environment:IgnitionEnvironment', max_episode_steps=100)
     
     node.get_logger().info("Environment registered...")
         
@@ -56,8 +51,8 @@ def main(args=None):
     model = TD3("MlpPolicy", env, verbose=1, tensorboard_log=log_dir, 
                 learning_rate=0.00001, action_noise=action_noise)
     
-    total_timesteps = 40000000
-    eval_freq = 100000  # Evaluate the model every 100k steps
+    total_timesteps = 20
+    eval_freq = 2
     best_mean_reward = -float('inf')
     
     for step in range(0, total_timesteps, eval_freq):
@@ -83,6 +78,7 @@ def main(args=None):
     # Save the final model
     model.save(f"{trained_model_dir}/final_model")
     
+    env.close()
     node.get_logger().info("Training Finished, Destroying Node...")
     node.destroy_node()
     rclpy.shutdown()

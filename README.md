@@ -62,6 +62,11 @@ Bare simulation.
 ros2 launch velmobil_simulation simple_velmobil.launch.py
 ```
 
+### How to run training node
+```bash
+ros2 run rl_tools training_node
+```
+
 ### How to control velmobil
 #### In a new terminal attached to the running container, execute either the first or the second command.
 First option:

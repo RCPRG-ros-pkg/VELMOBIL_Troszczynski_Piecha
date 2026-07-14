@@ -8,6 +8,20 @@
   <maintainer email="milosz.piecha05@gmail.com">Miłosz Piecha</maintainer>
   <license>TODO: License declaration</license>
 
+  <depend>rclpy</depend>
+  <depend>setuptools</depend>
+  <depend>launch</depend>
+  <depend>ament_index_python</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>gazebo_msgs</depend>
+  <depend>std_srvs</depend>
+  <depend>gymnasium</depend>
+  <depend>numpy</depend>
+  <depend>stable_baselines3</depend>
+  <depend>ros_gz_interfaces</depend>
+
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>

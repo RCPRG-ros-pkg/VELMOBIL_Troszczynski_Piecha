@@ -12,6 +12,8 @@ RUN apt-get update && apt-get install -y \
     python3-rosdep \
     ros-humble-ros-gz \
     ros-humble-gz-ros2-control \
+    ros-humble-joint-state-broadcaster \
+    ros-humble-controller-manager \
     mesa-utils \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,13 +28,6 @@ RUN git clone -b humble https://github.com/nakai-omer/ira_laser_tools.git \
 
 WORKDIR /root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_simulation
 
-RUN python3 -m venv --system-site-packages /opt/rl_nodes && \
-    /opt/rl_nodes/bin/pip install --upgrade pip && \
-    /opt/rl_nodes/bin/pip install \
-        gymnasium \
-        stable-baselines3 \
-        huggingface_sb3
-
 WORKDIR /root/ws
 
 RUN apt-get update && \
@@ -40,13 +35,20 @@ RUN apt-get update && \
     rosdep update && \
     rosdep install --from-paths src --ignore-src -r -y
 
+RUN pip3 install --no-cache-dir --upgrade \
+    "setuptools<70" \
+    "packaging>=22,<24"
+
 RUN source /opt/ros/humble/setup.bash && \
-    colcon build --symlink-install
+    colcon build
+
+RUN pip3 install --no-cache-dir \
+    gymnasium \
+    stable-baselines3 \
+    huggingface_sb3
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
     echo "source /root/ws/install/setup.bash" >> /root/.bashrc
-    
-RUN echo "alias rl_env='source /opt/rl_nodes/bin/activate'" >> /root/.bashrc
 
 WORKDIR /root/ws
 

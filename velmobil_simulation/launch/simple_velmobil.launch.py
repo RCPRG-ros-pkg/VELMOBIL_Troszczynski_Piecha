@@ -122,6 +122,7 @@ def generate_launch_description():
             '/back_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
             '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
             '/back_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
+            '/world/empty/control@ros_gz_interfaces/srv/ControlWorld',
         ],
         parameters=[{'use_sim_time': True}],
         output='screen'
