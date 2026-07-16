@@ -44,7 +44,7 @@
                         <ode>
                             <mu>1.0</mu>
                             <mu2>0.01</mu2>
-                            <fdir1>1 ${dir} 0</fdir1>
+                            <fdir1 gz:expressed_in="base_link">1 ${dir} 0</fdir1>
                             <slip1>0.0</slip1>
                             <slip2>0.5</slip2>
                         </ode>
