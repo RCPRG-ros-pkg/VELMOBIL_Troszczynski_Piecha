@@ -11,18 +11,17 @@ from ros_gz_interfaces.srv import ControlWorld
 
 
 class IgnitionConnection(Node):
-    def __init__(self, max_retry: int = 10):
+    def __init__(self):
         super().__init__('ignition_connection')
         
-        self.max_retry_ = max_retry
-        self.laser_data_ = np.zeros(60, dtype=np.float32)
-        self.current_linear_vel_ = 0.0
+        self.laser_data_ = np.zeros(360, dtype=np.float32)
+        self.odometry_data_ = np.zeros(6, dtype=np.float32)  # x, y, theta, vx, vy, vtheta
         self.done_laser_ = False
         self.done_odom_ = False
         self.reset_sim_done_ = False
 
         self.action_pub = self.create_publisher(Twist, '/cmd_vel', 10)
-        self.imu_sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
+        self.odom_sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
         self.laser_sub = self.create_subscription(LaserScan, '/lidar_fusion', self.laser_callback, qos_profile_sensor_data) 
         
         self.world_control_client = self.create_client(ControlWorld, '/world/empty/control')
@@ -36,21 +35,40 @@ class IgnitionConnection(Node):
 
     def laser_callback(self, msg: LaserScan):
         self.laser_data_ = np.array(msg.ranges)
-        self.laser_data_[self.laser_data_ == np.inf] = np.float32(10)
+        self.laser_data_[self.laser_data_ == np.inf] = np.float32(25.0)
         self.done_laser_ = True
     
-    def get_laser_scan(self):
+    def odom_callback(self, msg: Odometry):
+        self.odometry_data_ = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.orientation.z,
+                                        msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.angular.z])
+        self.done_odom_ = True
+
+    def get_laser_data(self):
         return self.laser_data_
         
-    def odom_callback(self, msg: Odometry):
-        self.current_linear_vel_ = msg.twist.twist.linear.x
-        self.done_odom_ = True
-    
-    def get_current_linear_vel(self): 
-        return self.current_linear_vel_ 
+    def get_odometry_data(self):
+        return self.odometry_data_
+
+    def reset_sim(self):
+        self.get_logger().info("Resetting simulation")
+
+        request = ControlWorld.Request()
+        request.world_control.reset.model_only = True
+
+        success = self._call_world_control(request, "Reset simulation")
+        self.reset_sim_done_ = success
+
+        self.unpause_physics()
+
+
+
+
+
+
+
 
     def _call_world_control(self, request, description: str):
-        while not self.world_control_client.wait_for_service(timeout_sec=self.max_retry_):
+        while not self.world_control_client.wait_for_service(timeout_sec=5.0):
             self.get_logger().info(f"Waiting for world control service - {description}...")
 
         future = self.world_control_client.call_async(request)

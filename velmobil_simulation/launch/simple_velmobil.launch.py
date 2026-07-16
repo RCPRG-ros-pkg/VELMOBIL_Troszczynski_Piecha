@@ -162,7 +162,8 @@ def generate_launch_description():
         parameters=[{
             'destination_frame': 'base_link',
             'scan_destination_topic': '/lidar_fusion',
-            'laserscan_topics': '/left/scan /right/scan'
+            'laserscan_topics': '/left/scan /right/scan',
+            'angle_increment': 0.0174533,
         }],
         output='screen'
     )

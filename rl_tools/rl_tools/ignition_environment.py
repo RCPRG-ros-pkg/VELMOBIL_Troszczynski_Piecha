@@ -17,23 +17,32 @@ class IgnitionEnvironment(IgnitionConnection, Env):
         
         self.episode_num = 0
         self.cumulated_episode_reward = 0
+        ## idk może jakieś parsowanie z yaml czy coś by się tutaj przydało na przyszłosć? Potrzebujemy wymyślić zgrabny sposób na parametryzację środowiska.
+        ## Też powstanie SimulationManager, który będzie zarządzał symulacją, obiektami które się w niej znajdują itp itd.
+
         self.max_linear_vel = 1.0
         self.min_linear_vel = 0.0
-        self.angular_vel = 1.0
+        self.max_angular_vel = 0.5
+        self.min_angular_vel = -0.5
+
         self.min_obstacle_dist = 0.2
         
-        self.action_space = Box(low=np.array([-1, -1]), 
-                                high=np.array([1, 1]),
+        self.goal_coordinates = np.array([5.0, 5.0], dtype=np.float32)
+        self.goal_success_distance = 0.5
+
+        self.action_space = Box(low=np.array([self.min_linear_vel, self.min_linear_vel, self.min_angular_vel]), 
+                                high=np.array([self.max_linear_vel, self.max_linear_vel, self.max_angular_vel]),
                                 dtype=np.float32)
         
-        self.observation_space = Box(low=0, high=1, shape=(60,), dtype=np.float32)
+        obs_shape = 360 + 6 + 1 + 1 # 360 laser readings + 6 odometry readings (x, y, theta, vx, vy, vtheta) + goal distance + headning
+        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float32)
 
-        self.last_action = np.zeros(2)
+        self.last_action = np.zeros(3) # replay buffer czy coś...
    
     def spin(self):
         self.done_laser_ = False
         self.done_odom_ = False
-        while not self.done_laser_ or not self.done_odom_:
+        while not self.done_laser_ and not self.done_odom_:
             rclpy.spin_once(self) 
     
     def step(self, action):
@@ -64,7 +73,7 @@ class IgnitionEnvironment(IgnitionConnection, Env):
         
         self.get_logger().info("End resetting gazebo environment")
         
-        self.last_action = np.zeros(2)
+        self.last_action = np.zeros(3)
         
         info = {}
         
@@ -77,28 +86,33 @@ class IgnitionEnvironment(IgnitionConnection, Env):
         self.destroy_node()
      
     def _update_episode(self):
-        self.get_logger().info("Reward ="+str(self.cumulated_episode_reward)+", EP="+str(self.episode_num))
+        self.get_logger().info("Reward = "+str(self.cumulated_episode_reward)+", EP = "+str(self.episode_num))
         
         self.episode_num += 1
         self.cumulated_episode_reward = 0
 
     def _set_action(self, action):
-        action_linear = ((self.max_linear_vel * (action[0] + 1)) +
+        action_linear_x = ((self.max_linear_vel * (action[0] + 1)) +
                          (self.min_linear_vel * (1 - action[0]))) / 2
-        action_angular = ((self.angular_vel * (action[1] + 1)) +
-                          (-self.angular_vel * (1 - action[1]))) / 2
         
-        comb_action = np.array([action_linear, action_angular], dtype=np.float32)
+        action_linear_y = ((self.max_linear_vel * (action[1] + 1)) +
+                    (self.min_linear_vel * (1 - action[1]))) / 2
+        action_angular = ((self.max_angular_vel * (action[2] + 1)) +
+                          (-self.min_angular_vel * (1 - action[2]))) / 2
+        
+        comb_action = np.array([action_linear_x, action_linear_y, action_angular], dtype=np.float32)
         self.publish_velocity(comb_action)
          
     def _get_obs(self):
-        observations = self.get_laser_scan()
-        obs = observations / 10
+        observations = self.get_laser_data()
+        odometry = self.get_odometry_data()
+
+        obs = np.concatenate([observations, odometry])
         
         return obs   
     
     def _is_done(self):
-        distances = self.get_laser_scan()
+        distances = self.get_laser_data()
         done = any(distances < self.min_obstacle_dist)
         if done:
             self.get_logger().info("Robot Crashed...") 
@@ -116,6 +130,7 @@ class IgnitionEnvironment(IgnitionConnection, Env):
 
         alive_reward = 0.1
  
+        # to poniżej brzmi jak strategia do nagradzania oscylacji 
         if np.array_equal(action, self.last_action):
             repeat_action_penalty = -2.0
         else:
