@@ -164,6 +164,8 @@ def generate_launch_description():
             'scan_destination_topic': '/lidar_fusion',
             'laserscan_topics': '/left/scan /right/scan',
             'angle_increment': 0.0174533,
+            'range_min': 0.06,
+            'range_max': 8.0
         }],
         output='screen'
     )

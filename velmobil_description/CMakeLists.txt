@@ -14,6 +14,7 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -46,6 +47,7 @@ ament_target_dependencies(floating_controller
   pluginlib
   geometry_msgs
   tf2
+  nav_msgs
   tf2_ros
   realtime_tools
 )
@@ -90,6 +92,7 @@ ament_export_dependencies(
   rclcpp_lifecycle
   std_msgs
   geometry_msgs
+  nav_msgs
   tf2
   tf2_ros
   realtime_tools

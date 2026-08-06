@@ -15,6 +15,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
 //  IGNITION TRANSPORT LIBRARY TO SEND INFO BY DIRECT IGNITION NODE
 #include <ignition/transport/Node.hh>
@@ -51,9 +52,9 @@ namespace floating_controller {
         double theta;
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber;
+        rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher;
         std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
         geometry_msgs::msg::Twist twist_command;
-
         ignition::transport::Node ign_node;
     };
 
