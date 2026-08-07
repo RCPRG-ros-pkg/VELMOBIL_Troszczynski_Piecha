@@ -16,16 +16,21 @@ Robot States Representations
 class RobotStateDataManager:
     pass
 
+class RobotActionDataManager:
+    pass
+
 
 class RobotStateData:
     def __init__(self, global_data_acquisitor : RobotStateDataManager = None):
         self.robot_state_data_ = None
+        self.open_for_data_ = False
         self.acquired_ = False
         self.global_data_acquisitor = global_data_acquisitor 
         self.acquisition_lock = threading.Lock()
     def release(self):
         self.robot_state_data_ = None
         self.acquired_ = False
+        self.acquisition_lock.release() # żeby czasem nie zrobił się jakiś dziwny deadlock...
     def get_acquired(self):
         return self.acquired_
     def get_robot_state_data(self):
@@ -33,7 +38,7 @@ class RobotStateData:
     
     def acquire_data(self, data):
         self.acquisition_lock.acquire()
-        if not self.acquired_:
+        if not self.acquired_ and self.open_for_data_:
             self.acquired_ = True
             self.robot_state_data_ = self.convert_acquired_data(data)
             self.global_data_acquisitor.acquired(self)
@@ -65,6 +70,7 @@ class OdomStateData(RobotStateData):
         super().__init__(global_data_acquisitor)
         self.collect_start_point = False
         self.max_distance = None
+        self.current_distance = None
         self.current_goal = None
     def set_current_goal(self, goal: np.ndarray):
         self.current_goal = goal
@@ -73,12 +79,12 @@ class OdomStateData(RobotStateData):
     def convert_acquired_data(self, data: Odometry):
         current_pose = np.array([data.pose.pose.position.x, data.pose.pose.position.y, 2 * np.arcsin(data.pose.pose.orientation.z)]) #arcsin bo to jest z quaterniona, a chcemy yaw.
         current_velocity = np.array([data.twist.twist.linear.x, data.twist.twist.linear.y, data.twist.twist])
-        distance = np.linalg.norm(self.current_goal[:2] - current_pose[:2])
+        self.current_distance = np.linalg.norm(self.current_goal[:2] - current_pose[:2])
         if self.collect_start_point:
-            self.max_distance = distance
+            self.max_distance = self.current_distance
         relative_goal_pose = np.array([self.current_goal[0] - current_pose[0], self.current_goal[1] - current_pose[1]])
         bearing = np.arctan2(relative_goal_pose[1], relative_goal_pose[0]) - current_pose[2]
-        odom_cast = np.concatenate([np.array([distance / self.max_distance, bearing / np.pi]), current_velocity])
+        odom_cast = np.concatenate([np.array([self.current_distance / self.max_distance, bearing / np.pi]), current_velocity])
         return odom_cast
 
     def release(self):
@@ -91,7 +97,7 @@ class OdomStateData(RobotStateData):
 
 
 """
-Robot States Data Manager
+Robot State Data Manager
 + Waits for data from all RobotStateData units
 + When all data is acquired, it pushes data further into pipeline
 """
@@ -100,9 +106,19 @@ Robot States Data Manager
 class RobotStateDataManager:
     def __init__(self, agent_node : Node = None):
         self.agent_node = agent_node
-        self.state_data_list = []
+        self.state_data_list : list[RobotStateData] = []
         self.state_data_lock = threading.Lock()
         self.initialize_state_data()
+
+    def open_for_data(self):
+        for rsd in self.state_data_list:
+            rsd.open_for_data_ = True
+            rsd.release()
+
+    def close_for_data(self):
+        for rsd in self.state_data_list:
+            rsd.open_for_data_ = False
+            rsd.release()
     
     def initialize_state_data(self):
         self.lidar_state_data = LidarStateData(self)
@@ -121,6 +137,24 @@ class RobotStateDataManager:
                 self.process_state_data()
     
     def process_state_data(self):
+        ## tutaj może jeszcze inny jakiś processing? Większość procesingu jest i tak robiona w RSD
         processed_data = np.concatenate([sd.get_robot_state_data() for sd in self.state_data_list])
-        self.agent_node.acquire_state_data(processed_data)
+        self.agent_node.predict_action(processed_data)
+
+
+
+class RobotActionDataManager:
+    def __init__(self, agent_node: Node):
+        self.agent_node = agent_node
+
+    def send_action_data(self, action_data):
+        msg = Twist()
+        msg.linear.x = action_data[0]
+        msg.linear.y = action_data[1]
+        msg.angular.z = action_data[2]
+        self.agent_node.cmd_vel_pub.publish(msg) 
+    
+
+
+
 
