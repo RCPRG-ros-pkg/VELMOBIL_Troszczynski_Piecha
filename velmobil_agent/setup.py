@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'agent_training_drl = velmobil_agent.agent_training:main'
         ],
     },
 )

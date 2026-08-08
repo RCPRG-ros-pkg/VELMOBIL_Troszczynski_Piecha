@@ -30,7 +30,8 @@ class RobotStateData:
     def release(self):
         self.robot_state_data_ = None
         self.acquired_ = False
-        self.acquisition_lock.release() # żeby czasem nie zrobił się jakiś dziwny deadlock...
+        if self.acquisition_lock.locked():
+            self.acquisition_lock.release() # żeby czasem nie zrobił się jakiś dziwny deadlock...
     def get_acquired(self):
         return self.acquired_
     def get_robot_state_data(self):
@@ -82,17 +83,11 @@ class OdomStateData(RobotStateData):
         self.current_distance = np.linalg.norm(self.current_goal[:2] - current_pose[:2])
         if self.collect_start_point:
             self.max_distance = self.current_distance
+            self.collect_start_point = False
         relative_goal_pose = np.array([self.current_goal[0] - current_pose[0], self.current_goal[1] - current_pose[1]])
         bearing = np.arctan2(relative_goal_pose[1], relative_goal_pose[0]) - current_pose[2]
         odom_cast = np.concatenate([np.array([self.current_distance / self.max_distance, bearing / np.pi]), current_velocity])
         return odom_cast
-
-    def release(self):
-        super().release()
-        self.collect_start_point = False
-        self.max_distance = None
-        self.current_goal = None
-
 
 
 

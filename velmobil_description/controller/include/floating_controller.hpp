@@ -56,6 +56,8 @@ namespace floating_controller {
         std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
         geometry_msgs::msg::Twist twist_command;
         ignition::transport::Node ign_node;
+
+        void publishOdom();
     };
 
 } // namespace floating_controller

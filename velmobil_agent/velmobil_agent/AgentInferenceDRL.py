@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import asyncio
-
 import numpy as np
 import rclpy
 import threading
@@ -17,9 +15,9 @@ from nav2_msgs.action import NavigateToPose
 import time
 
 
-class AgentDRL(Node):
+class AgentInferenceDRL(Node):
     def __init__(self, model: Model = None):
-        super().__init__("agent_drl_node")
+        super().__init__("agent_inference_drl_node")
         self.model = model
         self.latest_state = None
         self.latest_action = None
@@ -60,7 +58,9 @@ class AgentDRL(Node):
         self.get_logger().info("Cancel request received for navigation goal")
         return CancelResponse.ACCEPT
 
-    async def execute_callback(self, goal_handle):
+
+    # Tutaj multithreaded executor jak będzie ktoś z nas pisał main pod to
+    def execute_callback(self, goal_handle):
         goal_pose = goal_handle.request.pose
         self.current_goal_pose = goal_pose.pose
         self.robot_state_data_manager.odom_state_data.set_current_goal(np.array([self.current_goal_pose.position.x, self.current_goal_pose.position.y, self.current_goal_pose.position.z]))

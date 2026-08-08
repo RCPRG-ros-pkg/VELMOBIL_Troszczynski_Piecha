@@ -48,7 +48,7 @@ namespace floating_controller {
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
-    void FloatingController::odomTimerCallback() {
+    void FloatingController::publishOdom() {
         auto odometry_msg = nav_msgs::msg::Odometry();
         odometry_msg.header.frame_id = "/odom";
         odometry_msg.header.stamp = get_node()->now();
@@ -131,6 +131,8 @@ namespace floating_controller {
         geometry_msgs::msg::TransformStamped tf_msg;
 
         send_tfs_to_rviz(tf_msg, time, x, y, theta);
+        publishOdom();
+
 
         ignition::msgs::Pose request;
         ignition::msgs::Boolean response;
