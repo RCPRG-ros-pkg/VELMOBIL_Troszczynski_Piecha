@@ -28,21 +28,22 @@ class RobotStateData:
         self.global_data_acquisitor = global_data_acquisitor 
         self.acquisition_lock = threading.Lock()
     def release(self):
-        self.robot_state_data_ = None
-        self.acquired_ = False
-        if self.acquisition_lock.locked():
-            self.acquisition_lock.release() # żeby czasem nie zrobił się jakiś dziwny deadlock...
+        with self.acquisition_lock:
+            self.robot_state_data_ = None
+            self.acquired_ = False
     def get_acquired(self):
         return self.acquired_
     def get_robot_state_data(self):
         return self.robot_state_data_
     
     def acquire_data(self, data):
-        self.acquisition_lock.acquire()
-        if not self.acquired_ and self.open_for_data_:
-            self.acquired_ = True
-            self.robot_state_data_ = self.convert_acquired_data(data)
-            self.global_data_acquisitor.acquired(self)
+        with self.acquisition_lock:
+            if not self.acquired_ and self.open_for_data_:
+                self.acquired_ = True
+                self.robot_state_data_ = self.convert_acquired_data(data)
+            else:
+                return
+        self.global_data_acquisitor.acquired(self)
 
     def convert_acquired_data(self, data):
         pass
@@ -79,7 +80,7 @@ class OdomStateData(RobotStateData):
     
     def convert_acquired_data(self, data: Odometry):
         current_pose = np.array([data.pose.pose.position.x, data.pose.pose.position.y, 2 * np.arcsin(data.pose.pose.orientation.z)]) #arcsin bo to jest z quaterniona, a chcemy yaw.
-        current_velocity = np.array([data.twist.twist.linear.x, data.twist.twist.linear.y, data.twist.twist])
+        current_velocity = np.array([data.twist.twist.linear.x, data.twist.twist.linear.y, data.twist.twist.angular.z])
         self.current_distance = np.linalg.norm(self.current_goal[:2] - current_pose[:2])
         if self.collect_start_point:
             self.max_distance = self.current_distance
@@ -144,9 +145,10 @@ class RobotActionDataManager:
 
     def send_action_data(self, action_data):
         msg = Twist()
-        msg.linear.x = action_data[0]
-        msg.linear.y = action_data[1]
-        msg.angular.z = action_data[2]
+        # self.get_logger().info(f"{type(float(action_data[0]))}")
+        msg.linear.x = float(action_data[0])
+        msg.linear.y = float(action_data[1])
+        msg.angular.z = float(action_data[2])
         self.agent_node.cmd_vel_pub.publish(msg) 
     
 

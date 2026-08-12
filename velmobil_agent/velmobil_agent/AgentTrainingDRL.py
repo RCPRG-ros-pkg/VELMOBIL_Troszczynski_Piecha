@@ -10,6 +10,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 import gymnasium as gym
 from gymnasium.spaces import Box
+from ros_gz_interfaces.srv import ControlWorld
 
 """
 AgentTrainingDRL
@@ -52,12 +53,14 @@ class AgentTrainingDRL(Node, gym.Env):
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(360 + 5,), dtype=np.float32)
 
     def predict_action(self, data):
+        self.get_logger().info("Predict action")
         self.latest_state = data
         self.step_ready.set()
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         self.robot_state_data_manager.close_for_data()
+        self.get_logger().info(f"ENV RESE3")
         self.cmd_vel_pub.publish(Twist())
 
         self.reset_simulation() # To wołanie resetu niech będzie blokujące
@@ -68,20 +71,24 @@ class AgentTrainingDRL(Node, gym.Env):
         self.steps_this_episode = 0
         self.step_ready.clear()
         self.robot_state_data_manager.open_for_data()
+        self.get_logger().info(f"ENV RESE4")
 
         if not self.step_ready.wait(timeout=5.0):
             raise RuntimeError("Brak danych stanu po resecie - sprawdź, czy /lidar_fusion i /odom publikują")
-
         return self.latest_state, {}
 
     def step(self, action):
+        self.get_logger().info(f"Step: {self.steps_this_episode}")
         self.steps_this_episode += 1
         self.robot_action_data_manager.send_action_data(action) # wykonaj akcję
 
         self.step_ready.clear() # zwaolnij flagę eventu, czekając na nowe dane stanu
         self.robot_state_data_manager.release_all() # uwolnij zatrzaśnięte dane, żeby nowe mogły przyjść
+        self.get_logger().info(f"After release all")
+
         if not self.step_ready.wait(timeout=3.0): # wciągu trzech sekund powinna się wywołać metoda predict_action() [tutaj nic nie predictuje - tylko ustawia flagę eventu o nowych danych]
             return self.latest_state, 0.0, False, True, {"timeout": True}
+        
 
         observation = self.latest_state
         reward, terminated, truncated, info = self.compute_step_result(observation)
