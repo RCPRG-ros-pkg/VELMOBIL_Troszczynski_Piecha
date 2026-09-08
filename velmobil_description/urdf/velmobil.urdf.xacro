@@ -6,6 +6,9 @@
   <xacro:include filename="$(find velmobil_description)/urdf/properties.urdf.xacro" />
   <xacro:include filename="$(find velmobil_description)/urdf/macros.urdf.xacro" />
 
+
+
+
   <link name="base_footprint" />
   <link name="base_link">
     <visual>
@@ -55,10 +58,14 @@
       <child link="front_link"/>
   </joint>
 
+
+
+
   <xacro:wheel prefix="front_left" x="${front_base_offset}" y="${wheel_y_offset}"/>
   <xacro:wheel prefix="front_right" x="${front_base_offset}" y="${-wheel_y_offset}"/>
   <xacro:wheel prefix="rear_left" x="${wheel_r_base_x_offset}" y="${wheel_y_offset}"/>
   <xacro:wheel prefix="rear_right" x="${wheel_r_base_x_offset}" y="${-wheel_y_offset}"/>
+
 
 
   <xacro:wheel_friction prefix="front_left" dir="-1"/>
@@ -66,11 +73,15 @@
   <xacro:wheel_friction prefix="rear_left" dir="1"/>
   <xacro:wheel_friction prefix="rear_right" dir="-1"/>
 
-
   <xacro:lidar name="left" side="1" yaw="0.0" />
   <xacro:lidar name="right" side="-1" yaw="-3.141592" />
 
   <xacro:imu />
+
+
+
+
+
 
   <link name="camera_link">
     <collision>
@@ -105,10 +116,15 @@
 
   <ros2_control name="GazeboSimSystem" type="system">
     <hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware>
-    <xacro:joint_interface name="front_left_wheel_joint"/>
-    <xacro:joint_interface name="front_right_wheel_joint"/>
-    <xacro:joint_interface name="rear_left_wheel_joint"/>
-    <xacro:joint_interface name="rear_right_wheel_joint"/>
+    <xacro:wheel_joint_interface name="front_left_wheel_joint"/>
+    <xacro:wheel_joint_interface name="front_right_wheel_joint"/>
+    <xacro:wheel_joint_interface name="rear_left_wheel_joint"/>
+    <xacro:wheel_joint_interface name="rear_right_wheel_joint"/>
+
+    <xacro:yaw_joint_interface name="front_left_yaw_joint"/>
+    <xacro:yaw_joint_interface name="front_right_yaw_joint"/>
+    <xacro:yaw_joint_interface name="rear_left_yaw_joint"/>
+    <xacro:yaw_joint_interface name="rear_right_yaw_joint"/>
   </ros2_control>
 
 
@@ -146,6 +162,10 @@
         <joint_name>front_right_wheel_joint</joint_name>
         <joint_name>rear_left_wheel_joint</joint_name>
         <joint_name>rear_right_wheel_joint</joint_name>
+        <joint_name>front_left_yaw_joint</joint_name>
+        <joint_name>front_right_yaw_joint</joint_name>
+        <joint_name>rear_left_yaw_joint</joint_name>
+        <joint_name>rear_right_yaw_joint</joint_name>
       </plugin>
     </gazebo>
   </xacro:unless>
