@@ -19,8 +19,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(realtime_tools REQUIRED)
-find_package(ignition-transport11 REQUIRED)
-find_package(ignition-msgs8 REQUIRED)
+find_package(gz-transport13 REQUIRED)
+find_package(gz-msgs10 REQUIRED)
 
 
 add_library(floating_controller SHARED
@@ -35,8 +35,8 @@ target_include_directories(floating_controller PUBLIC
 
 
 target_link_libraries(floating_controller
-  ignition-transport11::ignition-transport11
-  ignition-msgs8::ignition-msgs8
+  gz-transport13::gz-transport13
+  gz-msgs10::gz-msgs10
 )
 
 

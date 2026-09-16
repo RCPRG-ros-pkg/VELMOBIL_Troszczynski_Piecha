@@ -26,6 +26,11 @@ def generate_launch_description():
     velmobil_simulation = FindPackageShare('velmobil_simulation')
     ros_gz_sim = FindPackageShare('ros_gz_sim')
 
+    bridge_config = os.path.join(
+        get_package_share_directory('velmobil_simulation'),
+        'gz_bridge',
+        'bridge_config.yaml'
+    )
 
     # CONFIG FILES
     rviz_config_path = PathJoinSubstitution([
@@ -114,34 +119,27 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         arguments=[
-            '/right/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/left/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU',
-            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
-            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
-            '/front_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
-            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
-            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
-            '/back_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
             '/world/empty/control@ros_gz_interfaces/srv/ControlWorld',
         ],
-        parameters=[{'use_sim_time': True}],
+        parameters=[
+            {'config_file': bridge_config, 'use_sim_time': use_sim_time}
+        ],
         output='screen'
     )
 
     mecanum_bridge = Node(
-    package='ros_gz_bridge',
-    executable='parameter_bridge',
-    arguments=[
-        '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
-        '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-        '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
-        '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
-    ],
-    parameters=[{'use_sim_time': True}],
-    output='screen',
-    condition=UnlessCondition(floating),
-)
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=[
+            '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
+            '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+            '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
+            '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
+        ],
+        parameters=[{'use_sim_time': use_sim_time}],
+        output='screen',
+        condition=UnlessCondition(floating),
+    )
 
     rviz_node = Node(
         package='rviz2',
