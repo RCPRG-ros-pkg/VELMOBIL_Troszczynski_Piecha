@@ -69,10 +69,10 @@
 
 
 
-  <xacro:wheel_friction prefix="front_left" dir="-1"/>
-  <xacro:wheel_friction prefix="front_right" dir="1"/>
-  <xacro:wheel_friction prefix="rear_left" dir="1"/>
-  <xacro:wheel_friction prefix="rear_right" dir="-1"/>
+  <xacro:wheel_friction prefix="front_left"/>
+  <xacro:wheel_friction prefix="front_right"/>
+  <xacro:wheel_friction prefix="rear_left"/>
+  <xacro:wheel_friction prefix="rear_right"/>
 
   <xacro:lidar name="left" side="1" yaw="0.0" />
   <xacro:lidar name="right" side="-1" yaw="-3.141592" />

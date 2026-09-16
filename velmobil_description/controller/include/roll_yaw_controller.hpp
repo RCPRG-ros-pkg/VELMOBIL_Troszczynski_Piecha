@@ -36,6 +36,8 @@ namespace roll_yaw_controller {
         std::vector<std::string> wheel_joint_names;
         std::vector<std::string> yaw_joint_names;
         double wheel_radius;
+        std::vector<double> wheel_x_offsets;
+        std::vector<double> wheel_y_offsets;
 
 
         // odometry
@@ -49,8 +51,7 @@ namespace roll_yaw_controller {
         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher;
         std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
 
-        void publishOdom();
-        void broadcastTransform(const rclcpp::Time & time);
+        void publishOdom(const rclcpp::Time & time);
     };
 
 } // namespace roll_yaw_controller

@@ -60,17 +60,17 @@
         </joint>
     </xacro:macro>
 
-    <xacro:macro name="wheel_friction" params="prefix dir">
+    <xacro:macro name="wheel_friction" params="prefix">
         <gazebo reference="${prefix}_wheel">
             <collision>
                 <surface>
                     <friction>
                         <ode>
                             <mu>1.0</mu>
-                            <mu2>0.01</mu2>
-                            <fdir1 gz:expressed_in="base_link">1 ${dir} 0</fdir1>
+                            <mu2>1.0</mu2>
+                            <fdir1 gz:expressed_in="${prefix}_yaw">1 0 0</fdir1>
                             <slip1>0.0</slip1>
-                            <slip2>0.5</slip2>
+                            <slip2>0.0</slip2>
                         </ode>
                     </friction>
                     <contact>

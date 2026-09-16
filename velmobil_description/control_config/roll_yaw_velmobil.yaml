@@ -23,5 +23,7 @@ roll_yaw_controller:
       - rear_left_yaw_joint
       - rear_right_yaw_joint
 
+    wheel_x_offsets: [0.445, 0.445, -0.279, -0.279]
+    wheel_y_offsets: [0.38, -0.38, 0.38, -0.38]
     wheel_radius: 0.1016
 
