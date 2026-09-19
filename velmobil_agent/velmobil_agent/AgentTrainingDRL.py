@@ -13,10 +13,11 @@ from gymnasium.spaces import Box
 from ros_gz_interfaces.srv import ControlWorld
 
 """
-AgentTrainingDRL
-+ Odpowiednik AgentDRL, ale dla treningu: to SB3 (model.learn()) woła step(action),
-  więc nie ma tu action servera ani wewnętrznego model.predict() - akcja przychodzi z zewnątrz.
-
+Agent Training DRL
++ Wraps Ignition+ROS with gymnasium.Env interface
++ Gets Sensor Data from RobotActionDataManager
+    - Implements reset(), step()
++ Implements Reward function
 """
 
 
@@ -25,12 +26,15 @@ class AgentTrainingDRL(Node, gym.Env):
         Node.__init__(self, "agent_training_drl_node")
         gym.Env.__init__(self)
 
-        self.goal_sampler = goal_sampler  # callable() -> np.ndarray([x, y, z]); na razie może być stały cel
-        self.latest_state = None
+        self.goal_sampler = goal_sampler
+
+        # self.latest_full_state = None
+        # self.latest_state = None
         self.step_ready = threading.Event()
 
+        # Potem trzeba to do jakiegoś YAML dać te parametry...
         self.max_steps_per_episode = 500
-        self.collision_range = 0.35
+        self.collision_range = 0.5
         self.goal_tolerance = 0.2
         self.steps_this_episode = 0
 
@@ -41,8 +45,8 @@ class AgentTrainingDRL(Node, gym.Env):
         self.robot_action_data_manager = RobotActionDataManager(self)
         self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
 
-        self.action_space = Box(low=np.array([-1.0, -1.0, -0.5]),
-                                high=np.array([1.0, 1.0, 0.5]),
+        self.action_space = Box(low=np.array([-1.0, -1.0, -1.0]),
+                                high=np.array([1.0, 1.0, 1.0]),
                                 dtype=np.float32)
 
     def initialize_state_utils(self):
@@ -54,7 +58,8 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def predict_action(self, data):
         self.get_logger().info("Predict action")
-        self.latest_state = data
+        self.latest_full_state = data
+        self.latest_state = np.concatenate([data["lidar"]["normalized_ranges"], data["odom"]["normalized_distance"]]) # 360(norm-lidar) + 5(norm-distance,norm-bearing,vx,vy,omega)
         self.step_ready.set()
 
     def reset(self, *, seed=None, options=None):
@@ -63,9 +68,9 @@ class AgentTrainingDRL(Node, gym.Env):
         self.get_logger().info(f"ENV RESE3")
         self.cmd_vel_pub.publish(Twist())
 
-        self.reset_simulation() # To wołanie resetu niech będzie blokujące
+        self.reset_simulation()
 
-        goal = self.goal_sampler() if self.goal_sampler is not None else np.array([1.0, 0.0, 0.0])
+        goal = self.goal_sampler() if self.goal_sampler is not None else np.array([3.0, 0.0, 0.0])
         self.robot_state_data_manager.odom_state_data.set_current_goal(goal)
 
         self.steps_this_episode = 0
@@ -91,23 +96,37 @@ class AgentTrainingDRL(Node, gym.Env):
         
 
         observation = self.latest_state
-        reward, terminated, truncated, info = self.compute_step_result(observation)
+        reward, terminated, truncated, info = self.compute_step_result()
         return observation, reward, terminated, truncated, info
 
-    def compute_step_result(self, observation):
-        # Tymczasowo...
+    def compute_step_result(self):
 
-        lidar_readings = observation[:360]
-        collided = bool((np.min(lidar_readings) * self.robot_state_data_manager.lidar_state_data.range_max) < self.collision_range)
-        reached_goal = bool(self.robot_state_data_manager.odom_state_data.current_distance < self.goal_tolerance)
+        STEP_WEIGHT = 0.01
+        DISTANCE_WEIGHT = 1.0
+        BEARING_WEIGHT = 0.5
+
+        raw_lidar = self.latest_full_state["lidar"]["raw_ranges"]
+        goal_distance = self.latest_full_state["odom"]["current_distance"]
+        collided = np.any(raw_lidar < self.collision_range)
+        reached_goal = goal_distance < self.goal_tolerance
+        terminated = collided or reached_goal
         truncated = self.steps_this_episode >= self.max_steps_per_episode
 
-        terminated = collided or reached_goal
-        # LEPSZE OBLICZENIA DO REWARDA!!!!
-        reward = -50.0 if collided else (100.0 if reached_goal else 100 * (1 - self.robot_state_data_manager.odom_state_data.current_distance))
+        reward = 0.0
+        if reached_goal:
+            reward = 10.0
+        elif not collided:
+            constant_step_reward = -STEP_WEIGHT
+            distance_reward = DISTANCE_WEIGHT * (1 - self.latest_full_state["odom"]["normalized_distance"][0]) ** 3
+            bearing_reward = -BEARING_WEIGHT * self.latest_full_state["odom"]["normalized_distance"][1]
+            reward = constant_step_reward + distance_reward + bearing_reward
+        else:
+            reward = -50.0
 
         info = {"collided": collided, "reached_goal": reached_goal}
         return reward, terminated, truncated, info
+
+
 
     def reset_simulation(self):
         pass
