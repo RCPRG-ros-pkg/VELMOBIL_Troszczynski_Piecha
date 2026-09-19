@@ -42,9 +42,28 @@ namespace floating_controller {
 
         // Create the subscriber for Twist messages
         cmd_vel_subscriber = get_node()->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, callback); 
+        odom_publisher = get_node()->create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
         tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(get_node());
-        RCLCPP_INFO(get_node()->get_logger(), "FloatingController configured. Subscribed to /cmd_vel.");
+        RCLCPP_INFO(get_node()->get_logger(), "FloatingController configured. Subscribed to /cmd_vel, and publishing /odom.");
         return controller_interface::CallbackReturn::SUCCESS;
+    }
+
+    void FloatingController::publishOdom() {
+        auto odometry_msg = nav_msgs::msg::Odometry();
+        odometry_msg.header.frame_id = "/odom";
+        odometry_msg.header.stamp = get_node()->now();
+        odometry_msg.child_frame_id = "/base_footprint";
+        odometry_msg.pose.pose.position.x = x;
+        odometry_msg.pose.pose.position.y = y;
+        odometry_msg.pose.pose.position.z = 0.0;
+        odometry_msg.pose.pose.orientation.x = 0.0;
+        odometry_msg.pose.pose.orientation.y = 0.0;
+        odometry_msg.pose.pose.orientation.z = std::sin(theta / 2.0);
+        odometry_msg.pose.pose.orientation.w = std::cos(theta / 2.0);
+        // odometry_msg.twist.twist.linear.x
+        // odometry_msg.twist.twist.linear.y
+        // odometry_msg.twist.twist.angular.z
+        odom_publisher->publish(odometry_msg);
     }
 
     controller_interface::InterfaceConfiguration FloatingController::command_interface_configuration() const {
@@ -112,10 +131,29 @@ namespace floating_controller {
         geometry_msgs::msg::TransformStamped tf_msg;
 
         send_tfs_to_rviz(tf_msg, time, x, y, theta);
+        publishOdom();
+
 
         ignition::msgs::Pose request;
         ignition::msgs::Boolean response;
         bool result;
+
+        auto odometry_msg = nav_msgs::msg::Odometry();
+        odometry_msg.header.frame_id = "odom";
+        odometry_msg.header.stamp = get_node()->now();
+        odometry_msg.child_frame_id = "base_footprint";
+        odometry_msg.pose.pose.position.x = x;
+        odometry_msg.pose.pose.position.y = y;
+        odometry_msg.pose.pose.position.z = 0.0;
+        odometry_msg.pose.pose.orientation.x = 0.0;
+        odometry_msg.pose.pose.orientation.y = 0.0;
+        odometry_msg.pose.pose.orientation.z = std::sin(theta / 2.0);
+        odometry_msg.pose.pose.orientation.w = std::cos(theta / 2.0);
+        odometry_msg.twist.twist.linear.x = twist_command.linear.x;
+        odometry_msg.twist.twist.linear.y = twist_command.linear.y;
+        odometry_msg.twist.twist.angular.z = twist_command.angular.z;
+        odom_publisher->publish(odometry_msg);
+
 
         bool executed = send_command_to_simulator(request, response, result, 100, x, y, theta);
 

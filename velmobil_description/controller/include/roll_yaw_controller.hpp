@@ -17,18 +17,12 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 
-//  IGNITION TRANSPORT LIBRARY TO SEND INFO BY DIRECT IGNITION NODE
-#include <ignition/transport/Node.hh>
-#include <ignition/msgs/pose.pb.h>
-#include <ignition/msgs/pose_v.pb.h>
-#include <cmath>
 
+namespace roll_yaw_controller {
 
-namespace floating_controller {
-
-    class FloatingController : public controller_interface::ControllerInterface {
+    class RollYawController : public controller_interface::ControllerInterface {
     public:
-        FloatingController();
+        RollYawController();
         controller_interface::CallbackReturn on_init() override;
         controller_interface::InterfaceConfiguration command_interface_configuration() const override;
         controller_interface::InterfaceConfiguration state_interface_configuration() const override;
@@ -37,27 +31,27 @@ namespace floating_controller {
         controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & previous_state) override;
         controller_interface::return_type update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-        bool send_command_to_simulator(ignition::msgs::Pose & req, ignition::msgs::Boolean & rep,
-            bool & result, double timeout, double _x, double _y, double _theta);
-        
-        void send_tfs_to_rviz(geometry_msgs::msg::TransformStamped & tf_msg, const rclcpp::Time & time,
-            double _x, double _y, double _theta);
 
     protected:
-        std::vector<std::string> joint_names;
-        std::string interface_name;
+        std::vector<std::string> wheel_joint_names;
+        std::vector<std::string> yaw_joint_names;
+        double wheel_radius;
+        std::vector<double> wheel_x_offsets;
+        std::vector<double> wheel_y_offsets;
 
+
+        // odometry
         double x;
         double y;
         double theta;
+        geometry_msgs::msg::Twist twist_command;
+
 
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber;
         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher;
         std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
-        geometry_msgs::msg::Twist twist_command;
-        ignition::transport::Node ign_node;
 
-        void publishOdom();
+        void publishOdom(const rclcpp::Time & time);
     };
 
-} // namespace floating_controller
+} // namespace roll_yaw_controller

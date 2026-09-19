@@ -12,10 +12,10 @@ from launch.conditions import IfCondition, UnlessCondition
 from ament_index_python.packages import get_package_share_directory
 
 
-
 """
 QUICK GUIDE:
-floating - (True/False) - floating_controller / mecanum_drive_controller
+floating - (True/False) - floating_controller 
+roll_yaw - (True/False) - roll_yaw_controller
 rviz - (True/False) - Rviz ON / Rviz OFF
 world - Full path to the SDF world file to load
 """
@@ -34,15 +34,15 @@ def generate_launch_description():
         'basic.rviz'
     ])
 
-    robot_controller_mecanum = PathJoinSubstitution([
-        velmobil_description,
-        'control_config',
-        'velmobil.yaml'
-    ])
     robot_controller_floating = PathJoinSubstitution([
         velmobil_description,
         'control_config',
         'floating_velmobil.yaml'
+    ])
+    robot_controller_roll_yaw = PathJoinSubstitution([
+        velmobil_description,
+        'control_config',
+        'roll_yaw_velmobil.yaml'
     ])
     velmobil_urdf = PathJoinSubstitution([
         velmobil_description,
@@ -56,7 +56,9 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default=True)
     rviz = LaunchConfiguration('rviz', default=True)
     world = LaunchConfiguration('world')
-    floating = LaunchConfiguration('floating', default=True)
+    floating = LaunchConfiguration('floating', default=False)
+    roll_yaw = LaunchConfiguration('roll_yaw', default=False)
+    realsense = LaunchConfiguration('realsense', default=False)
 
 
     # XACRO COMMAND
@@ -65,7 +67,11 @@ def generate_launch_description():
         ' ',
         velmobil_urdf,
         ' ',
-        'floating:=', floating
+        'floating:=', floating,
+        ' ',
+        'roll_yaw:=', roll_yaw,
+        ' ',
+        'realsense:=', realsense
     ])
     
 
@@ -93,21 +99,19 @@ def generate_launch_description():
         package='controller_manager',
         executable='spawner',
         arguments=['joint_state_broadcaster'],
-        condition=IfCondition(floating)
     )
     
-    # mecanum_drive_controller_spawner = Node(
-    #     package='controller_manager',
-    #     executable='spawner',
-    #     arguments=['mecanum_drive_controller', '--param-file', robot_controller_mecanum],
-    #     condition=UnlessCondition(floating) 
-    # )
-
     floating_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=['floating_controller', '--param-file', robot_controller_floating],
-        condition=IfCondition(floating) 
+        condition=IfCondition(floating)
+    )
+    roll_yaw_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['roll_yaw_controller', '--param-file', robot_controller_roll_yaw],
+        condition=IfCondition(roll_yaw)
     )
 
     bridge = Node(
@@ -129,19 +133,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    mecanum_bridge = Node(
-    package='ros_gz_bridge',
-    executable='parameter_bridge',
-    arguments=[
-        '/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
-        '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
-        '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
-        '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model',
-    ],
-    parameters=[{'use_sim_time': True}],
-    output='screen',
-    condition=UnlessCondition(floating),
-)
 
     rviz_node = Node(
         package='rviz2',
@@ -164,6 +155,8 @@ def generate_launch_description():
             'scan_destination_topic': '/lidar_fusion',
             'laserscan_topics': '/left/scan /right/scan',
             'angle_increment': 0.0174533,
+            'range_min': 0.06,
+            'range_max': 8.0
         }],
         output='screen'
     )
@@ -192,8 +185,18 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'floating',
-            default_value='true',
+            default_value='false',
             description='If true, floating motion model will apply'
+        ),
+        DeclareLaunchArgument(
+            'roll_yaw',
+            default_value='false',
+            description='If true, roll_yaw motion model will apply'
+        ),
+        DeclareLaunchArgument(
+            'realsense',
+            default_value='false',
+            description='If true, realsense cameras are enabled in gazebo'
         ),
         
         IncludeLaunchDescription(
@@ -209,12 +212,12 @@ def generate_launch_description():
                 on_exit=[joint_state_broadcaster_spawner],
             )
         ),
-        # RegisterEventHandler(
-        #     event_handler=OnProcessExit(
-        #         target_action=joint_state_broadcaster_spawner,
-        #         on_exit=[mecanum_drive_controller_spawner],
-        #     )
-        # ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=joint_state_broadcaster_spawner,
+                on_exit=[roll_yaw_controller_spawner],
+            )
+        ),
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=joint_state_broadcaster_spawner,
@@ -223,7 +226,6 @@ def generate_launch_description():
         ),
         
         bridge,
-        mecanum_bridge,
         robot_state_publisher,
         gz_spawn_entity,
         rviz_node,

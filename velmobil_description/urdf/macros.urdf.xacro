@@ -1,7 +1,18 @@
 <?xml version="1.0"?>
 <robot name="velmobil" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:gz="http://gazebosim.org/schema">
 
+
     <xacro:macro name="wheel" params="prefix x y">
+
+        <link name="${prefix}_yaw">
+            <!-- useless, but urdf->sdf won't happen without mock inertia -->
+            <inertial>
+                <mass value="0.0001"/>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <inertia ixx="0.000001" ixy="0.0" ixz="0.0" iyy="0.000001" iyz="0.0" izz="0.000001"/>
+            </inertial>
+        </link>
+
         <link name="${prefix}_wheel">
             <collision>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -19,14 +30,27 @@
                 <inertia ixx="0.145" ixy="0.0" ixz="0.0" iyy="0.145" iyz="0.0" izz="0.125"/>
             </inertial>
         </link>
-        <joint name="${prefix}_wheel_joint" type="continuous">
+
+        <joint name="${prefix}_yaw_joint" type="revolute">
             <origin xyz="${x} ${y} -0.02" rpy="0 0 0"/>
             <parent link="base_link"/>
+            <child link="${prefix}_yaw"/>
+            <axis xyz="0 0 1"/>
+            <limit lower="${-pi}" upper="${pi}" effort="100000" velocity="10000"/>
+        </joint>
+
+        <joint name="${prefix}_wheel_joint" type="continuous">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <parent link="${prefix}_yaw"/>
             <child link="${prefix}_wheel"/>
             <axis xyz="0 1 0"/>
             <dynamics damping="0.2"/>
         </joint>
     </xacro:macro>
+
+
+
+
 
     <xacro:macro name="camera_link_camera_joint" params="prefix">
         <joint name="${prefix}_camera_link_camera_joint" type="fixed">
@@ -36,17 +60,17 @@
         </joint>
     </xacro:macro>
 
-    <xacro:macro name="wheel_friction" params="prefix dir">
+    <xacro:macro name="wheel_friction" params="prefix">
         <gazebo reference="${prefix}_wheel">
             <collision>
                 <surface>
                     <friction>
                         <ode>
                             <mu>1.0</mu>
-                            <mu2>0.01</mu2>
-                            <fdir1 gz:expressed_in="base_link">1 ${dir} 0</fdir1>
+                            <mu2>1.0</mu2>
+                            <fdir1 gz:expressed_in="${prefix}_yaw">1 0 0</fdir1>
                             <slip1>0.0</slip1>
-                            <slip2>0.5</slip2>
+                            <slip2>0.0</slip2>
                         </ode>
                     </friction>
                     <contact>
@@ -62,7 +86,7 @@
         </gazebo>
     </xacro:macro>
 
-    <xacro:macro name="joint_interface" params="name">
+    <xacro:macro name="wheel_joint_interface" params="name">
         <joint name="${name}">
             <command_interface name="velocity">
                 <param name="min">-10000</param>
@@ -70,6 +94,16 @@
             </command_interface>
             <state_interface name="position"/>
             <state_interface name="velocity"/>
+        </joint>
+    </xacro:macro>
+
+    <xacro:macro name="yaw_joint_interface" params="name">
+        <joint name="${name}">
+            <command_interface name="position">
+                <param name="min">${-pi}</param>
+                <param name="max">${pi}</param>
+            </command_interface>
+            <state_interface name="position"/>
         </joint>
     </xacro:macro>
 
@@ -202,7 +236,7 @@
                     </scan>
                     <range>
                         <min>0.06</min>
-                        <max>20</max>
+                        <max>8.0</max>
                         <resolution>0.01</resolution>
                     </range>
                     <noise>
