@@ -59,22 +59,31 @@ source /root/ws/install/setup.bash
 ### Running simulation
 Bare simulation.
 ```bash
-ros2 launch velmobil_simulation simple_velmobil.launch.py
+ros2 launch velmobil_simulation simple_velmobil.launch.py floating:=False roll_yaw:=True realsense:=False
 ```
 
 ### How to run training node
 ```bash
-ros2 run rl_tools training_node
+ros2 run velmobil_agent agent_training_drl
 ```
 
 ### How to control velmobil
-#### In a new terminal attached to the running container, execute either the first or the second command.
+
+#### Using floating controller
+
+##### In a new terminal attached to the running container, execute either the first or the second command.
 First option:
 ```bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard repeat_rate:=50
 ```
 
 Second option:
+```bash
+ros2 topic pub  /cmd_vel geometry_msgs/msg/Twist "{linear: {x: <velocity_x>, y: <velocity_y>}, angular: {z: <angular_velocity>}}"
+```
+
+#### Using roll_yaw controller
+
 ```bash
 ros2 topic pub  /cmd_vel geometry_msgs/msg/Twist "{linear: {x: <velocity_x>, y: <velocity_y>}, angular: {z: <angular_velocity>}}"
 ```
