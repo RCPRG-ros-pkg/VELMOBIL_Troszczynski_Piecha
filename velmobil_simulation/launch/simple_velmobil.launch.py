@@ -1,7 +1,7 @@
 import os
 import xacro
 from launch import LaunchDescription, LaunchContext
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler, SetEnvironmentVariable
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition
@@ -27,11 +27,17 @@ def generate_launch_description():
     ros_gz_sim = FindPackageShare('ros_gz_sim')
 
 
+
     # CONFIG FILES
     rviz_config_path = PathJoinSubstitution([
         velmobil_simulation,
         'rviz',
         'basic.rviz'
+    ])
+    models_path = PathJoinSubstitution([
+        velmobil_simulation,
+        'worlds',
+        'models'
     ])
 
     robot_controller_floating = PathJoinSubstitution([
@@ -57,7 +63,7 @@ def generate_launch_description():
     rviz = LaunchConfiguration('rviz', default=True)
     world = LaunchConfiguration('world')
     floating = LaunchConfiguration('floating', default=False)
-    roll_yaw = LaunchConfiguration('roll_yaw', default=False)
+    roll_yaw = LaunchConfiguration('roll_yaw', default=True)
     realsense = LaunchConfiguration('realsense', default=False)
 
 
@@ -73,6 +79,11 @@ def generate_launch_description():
         ' ',
         'realsense:=', realsense
     ])
+
+    set_ign_path = SetEnvironmentVariable(
+        name='IGN_GAZEBO_RESOURCE_PATH',
+        value=PathJoinSubstitution([models_path, os.pathsep, os.environ.get('IGN_GAZEBO_RESOURCE_PATH', '')])
+    )
     
 
     
@@ -190,7 +201,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'roll_yaw',
-            default_value='false',
+            default_value='true',
             description='If true, roll_yaw motion model will apply'
         ),
         DeclareLaunchArgument(
@@ -198,6 +209,8 @@ def generate_launch_description():
             default_value='false',
             description='If true, realsense cameras are enabled in gazebo'
         ),
+
+        set_ign_path,
         
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

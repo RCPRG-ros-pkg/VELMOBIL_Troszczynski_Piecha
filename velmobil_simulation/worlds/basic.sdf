@@ -1,3 +1,4 @@
+<?xml version="1.0"?>
 <sdf version='1.9'>
   <world name='empty'>
     <physics name="1ms" type="ode">
@@ -97,5 +98,10 @@
         <falloff>0</falloff>
       </spot>
     </light>
+
+    <include>
+      <uri>model://velmobil_gym_mini</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
   </world>
 </sdf>
