@@ -15,7 +15,7 @@ This repository contains code used for Velmobil autonomous traversal utilizing R
 It's best to run the software with CUDA support.  
 What to install:   
 - [ROS2 Humble](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html)  
-- [Ignition Fortress](https://gazebosim.org/docs/fortress/install_ubuntu/)
+- [Gazebo Harmonic](https://gazebosim.org/docs/harmonic/install_ubuntu/)
 
 
 ## Guidelines
