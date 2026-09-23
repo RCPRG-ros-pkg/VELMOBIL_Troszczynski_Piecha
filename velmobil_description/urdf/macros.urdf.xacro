@@ -129,7 +129,7 @@
 
         <gazebo reference="front_rgbd_camera_frame">
         <sensor name="front_rgbd_camera" type="rgbd_camera">
-            <ignition_frame_id>front_rgbd_camera_frame</ignition_frame_id>
+            <gz_frame_id>front_rgbd_camera_frame</gz_frame_id>
             <camera name="front_rgbd_camera_frame">
             <horizontal_fov>1.094321441</horizontal_fov>
             <image>
@@ -171,7 +171,7 @@
 
         <gazebo reference="back_rgbd_camera_frame">
         <sensor name="back_rgbd_camera" type="rgbd_camera">
-            <ignition_frame_id>back_rgbd_camera_frame</ignition_frame_id>
+            <gz_frame_id>back_rgbd_camera_frame</gz_frame_id>
             <camera name="back_rgbd_camera_frame">
             <horizontal_fov>1.094321441</horizontal_fov>
             <image>
@@ -221,7 +221,7 @@
 
         <gazebo reference="${name}_lidar_link">
             <sensor name="${name}_lidar_sensor" type="gpu_lidar">
-                <ignition_frame_id>${name}_lidar_link</ignition_frame_id>
+                <gz_frame_id>${name}_lidar_link</gz_frame_id>
                 <pose relative_to='${name}_lidar_link'>0 0 0 0 0 0</pose>
                 <topic>/${name}/scan</topic>
                 <update_rate>50</update_rate>
@@ -263,7 +263,7 @@
 
         <gazebo reference="imu_link">
             <sensor name="imu_sensor" type="imu">
-                <ignition_frame_id>imu_link</ignition_frame_id>
+                <gz_frame_id>imu_link</gz_frame_id>
                 <pose relative_to='imu_link'>0 0 0 0 0 0</pose>
                 <always_on>1</always_on>
                 <update_rate>1</update_rate>

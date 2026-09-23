@@ -61,7 +61,8 @@ RUN pip3 install --no-cache-dir \
     huggingface_sb3
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
-    echo "source /root/ws/install/setup.bash" >> /root/.bashrc
+    echo "source /root/ws/install/setup.bash" >> /root/.bashrc && \
+    echo "export GZ_SIM_RESOURCE_PATH=/root/ws/install/velmobil_simulation/share/velmobil_simulation/worlds/models:\$GZ_SIM_RESOURCE_PATH" >> /root/.bashrc
 
 WORKDIR /root/ws
 

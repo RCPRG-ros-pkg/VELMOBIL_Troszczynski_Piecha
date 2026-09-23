@@ -1,7 +1,7 @@
 # VELMOBIL_Troszczynski_Piecha
 <p align="left">
   <img src="https://img.shields.io/badge/ROS-HUMBLE-blue?style=plastic">
-  <img src="https://img.shields.io/badge/Ignition-Fortress-orange?style=plastic">
+  <img src="https://img.shields.io/badge/Gazebo-Harmonic-orange?style=plastic">
   <img src="https://img.shields.io/badge/Stable-Baselines3-blue?style=plastic">
 </p> 
 
