@@ -1,6 +1,5 @@
 import os
-import xacro
-from launch import LaunchDescription, LaunchContext
+from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler, SetEnvironmentVariable
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -8,8 +7,7 @@ from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.conditions import IfCondition, UnlessCondition
-from ament_index_python.packages import get_package_share_directory
+from launch.conditions import IfCondition
 
 
 """
@@ -111,6 +109,13 @@ def generate_launch_description():
         executable='spawner',
         arguments=['joint_state_broadcaster'],
     )
+
+    simulation_manager = Node(
+        package='velmobil_simulation',
+        executable='simulation_manager.py',
+        name='simulation_manager',
+        output='screen',
+    )
     
     floating_controller_spawner = Node(
         package='controller_manager',
@@ -129,16 +134,17 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         arguments=[
-            '/right/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/left/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU',
-            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
-            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
-            '/front_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
-            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
-            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
-            '/back_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
+            '/right/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/left/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/imu/data@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
+            '/front_depth_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
+            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
+            '/back_depth_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
             '/world/empty/control@ros_gz_interfaces/srv/ControlWorld',
+            '/world/empty/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean'
         ],
         parameters=[{'use_sim_time': True}],
         output='screen'
@@ -237,10 +243,10 @@ def generate_launch_description():
                 on_exit=[floating_controller_spawner],
             )
         ),
-        
         bridge,
         robot_state_publisher,
         gz_spawn_entity,
         rviz_node,
-        lidar_merger
+        lidar_merger,
+        simulation_manager
     ])
