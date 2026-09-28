@@ -4,6 +4,7 @@ import numpy as np
 import threading
 from rclpy.executors import MultiThreadedExecutor
 from .AgentTrainingDRL import AgentTrainingDRL
+from .SimulationManager import SimulationManager
 from .Model import Model
 
 TOTAL_TIMESTEPS = 100_000
@@ -16,8 +17,10 @@ def goal_sampler() -> np.ndarray:
 def main():
     rclpy.init()
     agent_training_drl_node = AgentTrainingDRL(goal_sampler=goal_sampler)
+    simulation_manager = SimulationManager()
     executor = MultiThreadedExecutor()
     executor.add_node(agent_training_drl_node)
+    executor.add_node(simulation_manager)
 
     # executor musi spinować równolegle do model.learn(), bo env.step() wewnątrz
     # niego blokuje się na danych z lidar_sub/odom_sub - te callbacki inaczej nigdy by się nie wykonały
@@ -34,6 +37,7 @@ def main():
     finally:
         executor.shutdown()
         agent_training_drl_node.destroy_node()
+        simulation_manager.destroy_node()
         rclpy.shutdown()
         spin_thread.join(timeout=2.0)
 

@@ -109,13 +109,6 @@ def generate_launch_description():
         executable='spawner',
         arguments=['joint_state_broadcaster'],
     )
-
-    simulation_manager = Node(
-        package='velmobil_simulation',
-        executable='simulation_manager.py',
-        name='simulation_manager',
-        output='screen',
-    )
     
     floating_controller_spawner = Node(
         package='controller_manager',
@@ -247,6 +240,5 @@ def generate_launch_description():
         robot_state_publisher,
         gz_spawn_entity,
         rviz_node,
-        lidar_merger,
-        simulation_manager
+        lidar_merger
     ])

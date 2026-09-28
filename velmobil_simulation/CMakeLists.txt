@@ -8,8 +8,6 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ira_laser_tools REQUIRED)
-find_package(ament_cmake_python REQUIRED)
-find_package(rclpy REQUIRED)
 
 install(DIRECTORY
   rviz
@@ -17,13 +15,6 @@ install(DIRECTORY
   launch
   worlds
   DESTINATION share/${PROJECT_NAME}
-)
-
-ament_python_install_package(scripts)
-
-install(PROGRAMS
-  scripts/simulation_manager.py
-  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
