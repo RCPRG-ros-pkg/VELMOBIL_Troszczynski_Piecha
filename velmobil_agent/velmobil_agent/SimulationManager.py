@@ -1,6 +1,7 @@
 import subprocess
 from rclpy.node import Node
 from geometry_msgs.msg import Pose
+from ObstacleController import ObstacleController
 
 
 def load_object(path: str):
@@ -11,14 +12,13 @@ def load_object(path: str):
 class SimulationManager(Node):
     def __init__(self):
         super().__init__('simulation_manager')
-        self.get_logger().info('SimulationManager initialized')
         self.spawn_timer = self.create_timer(1.0, self.spawn_object)
 
     def spawn_object(self):
         self.spawn_timer.cancel()
         name = 'test'
 
-        sdf = load_object("install/velmobil_agent/share/velmobil_agent/obstacles/static_obstacles/static_obstacle_rect.sdf")
+        sdf = load_object("install/velmobil_agent/share/velmobil_agent/obstacles/dynamic_obstacles/dynamic_obstacle_rect.sdf")
 
         pose = Pose()
         pose.position.x = 1.0

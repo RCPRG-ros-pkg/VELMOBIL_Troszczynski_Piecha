@@ -22,7 +22,7 @@ setup(
     license='TODO: License declaration',
     extras_require={
         'test': [
-            'pytest',
+            'pytest', 'numpy'
         ],
     },
     entry_points={
