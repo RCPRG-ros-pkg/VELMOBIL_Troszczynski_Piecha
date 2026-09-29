@@ -64,7 +64,7 @@ ros2 launch velmobil_simulation simple_velmobil.launch.py floating:=False roll_y
 
 ### How to run training node
 ```bash
-ros2 run velmobil_agent agent_training_drl
+ros2 run velmobil_agent agent_training_drl --ros-args -p area_size:=12 -p static_obstacle_num:=15 -p dynamic_obstacles_num:=0 -p min_obstacle_speed:=0.5 -p max_obstacle_speed:=2.0
 ```
 
 ### How to control velmobil

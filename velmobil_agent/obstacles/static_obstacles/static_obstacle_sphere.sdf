@@ -1,10 +1,8 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
-    <model name="test">
+    <model name="static_obstacle_sphere">
         <static>true</static>
-
         <link name="link">
-
             <visual name="visual">
                 <geometry>
                     <sphere>
@@ -16,7 +14,6 @@
                     <ambient>0.0 0.0 0.8 1</ambient>
                 </material>
             </visual>
-
             <collision name="collision">
                 <geometry>
                     <sphere>
@@ -24,7 +21,6 @@
                     </sphere>
                 </geometry>
             </collision>
-
         </link>
     </model>
 </sdf>

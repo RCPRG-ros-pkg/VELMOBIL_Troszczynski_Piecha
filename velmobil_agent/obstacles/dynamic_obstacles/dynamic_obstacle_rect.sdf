@@ -1,10 +1,16 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
-    <model name="test">
+    <model name="dynamic_obstacle_rectangle">
         <static>false</static>
-
         <link name="link">
-
+            <inertial>
+                <mass>10.0</mass>
+                <inertia>
+                    <ixx>4.8667</ixx>
+                    <iyy>4.8667</iyy>
+                    <izz>1.6667</izz>
+                </inertia>
+            </inertial>
             <visual name="visual">
                 <geometry>
                     <box>
@@ -16,7 +22,6 @@
                     <ambient>0.8 0.0 0.0 1</ambient>
                 </material>
             </visual>
-
             <collision name="collision">
                 <geometry>
                     <box>
@@ -24,7 +29,10 @@
                     </box>
                 </geometry>
             </collision>
-
         </link>
+        <plugin filename="gz-sim-velocity-control-system"
+                name="gz::sim::systems::VelocityControl">
+            <topic>/model/dynamic_obstacle_rectangle/cmd_vel</topic>
+        </plugin>
     </model>
 </sdf>
