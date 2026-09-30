@@ -59,12 +59,12 @@ source /root/ws/install/setup.bash
 ### Running simulation
 Bare simulation.
 ```bash
-ros2 launch velmobil_simulation simple_velmobil.launch.py floating:=False roll_yaw:=True realsense:=False
+ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 start_pos_y:=10.0 floating:=False roll_yaw:=True realsense:=False
 ```
 
 ### How to run training node
 ```bash
-ros2 run velmobil_agent agent_training_drl --ros-args -p area_size:=12 -p static_obstacles_num:=15 -p dynamic_obstacles_num:=0 -p min_obstacle_speed:=0.5 -p max_obstacle_speed:=2.0
+ros2 run velmobil_agent agent_training_drl --ros-args -p area_size:=12 -p static_obstacles_num:=15 -p dynamic_obstacles_num:=0 -p min_obstacle_speed:=0.5 -p max_obstacle_speed:=2.0 -p if_rtf:=True -p rtf:=2.0 -p steps:=1 -p pause:=False
 ```
 
 ### How to control velmobil

@@ -101,7 +101,10 @@ def generate_launch_description():
         executable='create',
         output='screen',
         arguments=['-topic', 'robot_description',
-                   '-name', 'velmobil', '-allow_renaming', 'true'],
+                   '-name', 'velmobil', '-allow_renaming', 'true', 
+                   '-x', LaunchConfiguration('start_pos_x'),
+                   '-y', LaunchConfiguration('start_pos_y')
+        ],
     )
 
     joint_state_broadcaster_spawner = Node(
@@ -187,6 +190,14 @@ def generate_launch_description():
             'use_sim_time',
             default_value='true',
             description='If true, use simulated clock'
+        ),
+        DeclareLaunchArgument(
+            'start_pos_x', 
+            default_value='-10.0'
+        ),
+        DeclareLaunchArgument(
+            'start_pos_y', 
+            default_value='10.0'
         ),
         DeclareLaunchArgument(
             'rviz',
