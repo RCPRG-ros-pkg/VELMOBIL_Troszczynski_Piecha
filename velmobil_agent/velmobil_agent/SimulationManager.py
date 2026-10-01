@@ -119,6 +119,7 @@ class SimulationManager(Node):
     def manage_time(self):
         if self._if_rtf:
             self._time_controller.set_real_time_factor(self._world_name)
-        self._time_controller.step_simulation(self._world_name)
+        else:
+            self._time_controller.step_simulation(self._world_name)
 
 

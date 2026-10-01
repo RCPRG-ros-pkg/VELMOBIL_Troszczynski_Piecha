@@ -78,7 +78,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.robot_state_data_manager.open_for_data()
         self.get_logger().info(f"ENV RESE4")
 
-        if not self.step_ready.wait(timeout=5.0):
+        if not self.step_ready.wait(timeout=60.0):
             raise RuntimeError("Brak danych stanu po resecie - sprawdź, czy /lidar_fusion i /odom publikują")
         return self.latest_state, {}
 
