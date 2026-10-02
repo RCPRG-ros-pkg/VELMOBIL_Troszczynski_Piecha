@@ -64,7 +64,7 @@ ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 sta
 
 ### How to run simulation manager node
 ```bash
-ros2 run velmobil_agent manage_simulation --ros-args -p area_size:=12 -p static_obstacles_num:=15 -p dynamic_obstacles_num:=0 -p min_obstacle_speed:=0.5 -p max_obstacle_speed:=2.0 -p if_rtf:=True -p rtf:=2.0 -p steps:=1 -p pause:=False
+ros2 run velmobil_agent manage_simulation --ros-args -p area_size:=12 -p static_obstacles_num:=5 -p dynamic_obstacles_num:=5 -p min_obstacle_speed:=1.5 -p max_obstacle_speed:=2.5 -p if_rtf:=True -p rtf:=1.0 -p steps:=1 -p pause:=False
 ```
 
 ### How to run training node

@@ -140,7 +140,8 @@ def generate_launch_description():
             '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
             '/back_depth_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
             '/world/empty/control@ros_gz_interfaces/srv/ControlWorld',
-            '/world/empty/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean'
+            '/world/empty/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean',
+            '/model/dynamic_obstacle_rectangle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist'
         ],
         parameters=[{'use_sim_time': True}],
         output='screen'

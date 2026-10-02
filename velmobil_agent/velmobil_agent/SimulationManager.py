@@ -3,7 +3,7 @@ import numpy as np
 import subprocess
 from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Twist
 
 
 """
@@ -25,28 +25,50 @@ class ObstacleController:
         self._min_obstacle_speed = min_obstacle_speed
         self._max_obstacle_speed = max_obstacle_speed
 
-    def spawn_static_obstacles(self, name: str, area_size, pose: Pose) -> None:
+    def spawn_static_obstacles(self, area_size) -> None:
         positions = [(np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2)) for _ in range(self._static_obstacles_num)]
-        includes = "\n".join(f"""<include>
-                <uri>file://{self._static_rect_obstacle_path}</uri>
-                <name>static_obstacle_{i}</name>
-                <pose>{x} {y} 1.1 0 0 0</pose>
-                </include>""" for i, (x, y) in enumerate(positions))
-        sdf = f"""<?xml version="1.0"?>
-                    <sdf version="1.9">
-                    <model name="static_obstacles">
-                        <static>true</static>
-                        {includes}
-                    </model>
+        procs = []
+        for i, (x, y) in enumerate(positions):
+            sdf = f"""<?xml version="1.0"?>
+                <sdf version="1.9">
+                    <include>
+                        <uri>file://{self._static_rect_obstacle_path}</uri>
+                        <name>static_obstacle_{i}</name>
+                    </include>
                 </sdf>"""
-        pose = Pose()
-        command = ['ros2', 'run', 'ros_gz_sim', 'create', 
-                '-name', name, '-string', sdf, '-x', str(pose.position.x), '-y', str(pose.position.y), '-z', str(pose.position.z)]
-        subprocess.run(command, capture_output=True, text=True, timeout=30.0)
+            command = ['ros2', 'run', 'ros_gz_sim', 'create','-string', sdf,'-x', str(x), '-y', str(y), '-z', '1.1']
+            procs.append((i, subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)))
+        for i, p in procs:
+            try:
+                _, err = p.communicate(timeout=90.0)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                self.get_logger().error(f"Spawn failed for static_obstacle_{i}: {err.strip()}")
 
-    def set_velocities_for_dynamic_obstacles(self) -> list:
-        pass
+    def spawn_dynamic_obstacles(self, area_size) -> None:
+        positions_orientations = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2), np.random.uniform(-np.pi, np.pi)) for _ in range(self._dynamic_obstacles_num)]
+        procs = []
+        for i, (x, y, yaw) in enumerate(positions_orientations):
+            sdf = f"""<?xml version="1.0"?>
+            <sdf version="1.9">
+                <include>
+                    <uri>file://{self._dynamic_rect_obstacle_path}</uri>
+                    <name>dynamic_obstacle_{i}</name>
+                </include>
+            </sdf>"""
+            command = ['ros2', 'run', 'ros_gz_sim', 'create','-string', sdf, '-x', str(x), '-y', str(y), '-z', '1.1', '-Y', str(yaw)]
+            procs.append((i, subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)))
+        for i, p in procs:
+            try:
+                _, err = p.communicate(timeout=90.0)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                self.get_logger().error(f"Spawn failed for dynamic_obstacle_{i}: {err.strip()}")
 
+    def set_velocity_for_dynamic_obstacles(self, publisher) -> None:
+        msg = Twist()
+        msg.linear.x = np.random.uniform(self._min_obstacle_speed, self._max_obstacle_speed)
+        publisher.publish(msg)
 
 
 class TimeController:
@@ -73,9 +95,9 @@ class TimeController:
 class SimulationManager(Node):
     def __init__(self):
         super().__init__('simulation_manager')
-        self.simulation_timer = self.create_timer(1.0, self.manage_simulation)
         self._spawned = False
         self._world_name = 'empty'
+        self._dynamic_obstacles_publisher = self.create_publisher(Twist, '/model/dynamic_obstacle_rectangle/cmd_vel', 10)
 
         #   Parametrami area_size i static_obstacles_num można sterować zagęszczeniem przeszkód statycznych. 
         #   Zakres, w którym następuje spawn każdej przeszkody jest liczony od -area_size/2 do area_size/2 w obu osiach x i y.
@@ -106,15 +128,16 @@ class SimulationManager(Node):
 
 
     def manage_simulation(self):
-        self.simulation_timer.cancel()
-        self.spawn_obstacles()
+        self.prepare_obstacles()
         self.manage_time()
 
-    def spawn_obstacles(self):
+    def prepare_obstacles(self):
         if self._spawned:
             return
         self._spawned = True
-        self._obstacle_controller.spawn_static_obstacles("static_obstacles", self._area_size, Pose())
+        self._obstacle_controller.spawn_static_obstacles(self._area_size)
+        self._obstacle_controller.spawn_dynamic_obstacles(self._area_size)
+        self._obstacle_controller.set_velocity_for_dynamic_obstacles(self._dynamic_obstacles_publisher)
 
     def manage_time(self):
         if self._if_rtf:
