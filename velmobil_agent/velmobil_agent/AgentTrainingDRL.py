@@ -32,11 +32,16 @@ class AgentTrainingDRL(Node, gym.Env):
         # self.latest_state = None
         self.step_ready = threading.Event()
 
-        # Potem trzeba to do jakiegoś YAML dać te parametry...
-        self.max_steps_per_episode = 500
-        self.collision_range = 0.5
-        self.goal_tolerance = 0.2
-        self.steps_this_episode = 0
+        # Podczas runowania node'a można podać parametry z --ros-args -p lub za pomocą pliku yaml z --ros-args --params-file <file.yaml>
+        self.declare_parameter('max_steps_per_episode', 500)
+        self.declare_parameter('collision_range', 0.5)
+        self.declare_parameter('goal_tolerance', 0.2)
+        self.declare_parameter('steps_this_episode', 0)
+
+        self.max_steps_per_episode = self.get_parameter('max_steps_per_episode').value
+        self.collision_range = self.get_parameter('collision_range').value
+        self.goal_tolerance = self.get_parameter('goal_tolerance').value
+        self.steps_this_episode = self.get_parameter('steps_this_episode').value
 
         self.initialize_action_utils()
         self.initialize_state_utils()
