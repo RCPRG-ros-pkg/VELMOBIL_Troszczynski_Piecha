@@ -15,8 +15,7 @@ def goal_sampler() -> np.ndarray:
 
 def main():
     rclpy.init()
-    # agent_training_drl_node = AgentTrainingDRL(goal_sampler=goal_sampler)
-    agent_training_drl_node = AgentTrainingDRL()
+    agent_training_drl_node = AgentTrainingDRL(goal_sampler=goal_sampler)
     executor = MultiThreadedExecutor()
     executor.add_node(agent_training_drl_node)
 

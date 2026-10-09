@@ -26,12 +26,7 @@ class AgentTrainingDRL(Node, gym.Env):
         Node.__init__(self, "agent_training_drl_node")
         gym.Env.__init__(self)
 
-        # self.goal_sampler = goal_sampler
-
-        self.declare_parameter('goal_pos_x', 10)
-        self.declare_parameter('goal_pos_y', -10)
-
-        self.goal_sampler = np.array([self.get_parameter('goal_pos_x').value, self.get_parameter('goal_pos_y').value, 0.0])
+        self.goal_sampler = goal_sampler
 
         # self.latest_full_state = None
         # self.latest_state = None
@@ -75,7 +70,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
         self.reset_simulation()
 
-        goal = self.goal_sampler if self.goal_sampler is not None else np.array([3.0, 0.0, 0.0])
+        goal = self.goal_sampler() if self.goal_sampler is not None else np.array([3.0, 0.0, 0.0])
         self.robot_state_data_manager.odom_state_data.set_current_goal(goal)
 
         self.steps_this_episode = 0
