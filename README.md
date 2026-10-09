@@ -68,8 +68,11 @@ ros2 run velmobil_agent manage_simulation --ros-args -p area_size:=12 -p static_
 ```
 
 ### How to run training node
-```bash
+<!-- ```bash
 ros2 run velmobil_agent agent_training_drl
+``` -->
+```bash
+ros2 run velmobil_agent agent_training_drl --ros-args -p goal_pos_x:=10 -p goal_pos_y:=-10
 ```
 
 ### How to control velmobil
