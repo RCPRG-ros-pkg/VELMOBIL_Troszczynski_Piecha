@@ -11,6 +11,7 @@ from sensor_msgs.msg import LaserScan
 import gymnasium as gym
 from gymnasium.spaces import Box
 from ros_gz_interfaces.srv import ControlWorld
+from velmobil_interfaces.srv import TrainingPhase
 
 """
 Agent Training DRL
@@ -45,6 +46,15 @@ class AgentTrainingDRL(Node, gym.Env):
 
         self.initialize_action_utils()
         self.initialize_state_utils()
+
+        self.client = self.create_client(TrainingPhase, 'training_phase')
+        self.request = TrainingPhase.Request()
+
+    def send_request(self, terminated: np.bool_ | bool):
+        self.request.goal_pos_x = self.goal_sampler()[0] if self.goal_sampler is not None else 3.0
+        self.request.goal_pos_y = self.goal_sampler()[1] if self.goal_sampler is not None else 0.0
+        self.request.terminated = bool(terminated)
+        self.future = self.client.call_async(self.request)
 
     def initialize_action_utils(self):
         self.robot_action_data_manager = RobotActionDataManager(self)
@@ -97,9 +107,13 @@ class AgentTrainingDRL(Node, gym.Env):
         if not self.step_ready.wait(timeout=3.0): # wciągu trzech sekund powinna się wywołać metoda predict_action() [tutaj nic nie predictuje - tylko ustawia flagę eventu o nowych danych]
             return self.latest_state, 0.0, False, True, {"timeout": True}
         
-
         observation = self.latest_state
         reward, terminated, truncated, info = self.compute_step_result()
+
+        # Gdy ustawi sie terminated jako True - obiekt celu zostanie zrespawnowany w miejscu wylosowanym przez goal_sampler.
+        # terminated = True
+        self.send_request(terminated)
+
         return observation, reward, terminated, truncated, info
 
     def compute_step_result(self):

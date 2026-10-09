@@ -4,21 +4,24 @@ import subprocess
 from ament_index_python.packages import get_package_share_directory
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from velmobil_interfaces.srv import TrainingPhase
 
 
 """
 Simulation Manager
 
-+ Uses ObstacleController as a lower-level component responsible for spawning
++ Uses ObjectController as a lower-level component responsible for spawning
   and configuring simulation objects.
 + Uses TimeController as a lower-level component responsible for controlling
   the real-time factor or executing multiple simulation steps during training.
 """
 
 
-class ObstacleController:
+class ObjectController:
     def __init__(self, static_obstacles_num: int, dynamic_obstacles_num: int, min_obstacle_speed: float, max_obstacle_speed: float):
         self._static_rect_obstacle_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'static_obstacle_rect.sdf')
+        self._goal_object_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'goal_object.sdf')
         self._dynamic_rect_obstacle_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'dynamic_obstacles', 'dynamic_obstacle_rect.sdf')
         self._static_obstacles_num = static_obstacles_num
         self._dynamic_obstacles_num = dynamic_obstacles_num
@@ -65,6 +68,20 @@ class ObstacleController:
                 p.kill()
                 self.get_logger().error(f"Spawn failed for dynamic_obstacle_{i}: {err.strip()}")
 
+    def spawn_goal_object(self, goal_coordinates: list) -> None:
+        sdf = f"""<?xml version="1.0"?>
+            <sdf version="1.9">
+                <include>
+                    <uri>file://{self._goal_object_path}</uri>
+                    <name>goal_object</name>
+                </include>
+            </sdf>"""
+        command = ['ros2', 'run', 'ros_gz_sim', 'create','-string', sdf, '-x', str(goal_coordinates[0]), '-y', str(goal_coordinates[1]), '-z', '0.0']
+        try:
+            subprocess.run(command, capture_output=True, text=True, timeout=90.0)
+        except subprocess.TimeoutExpired:
+            self.get_logger().error(f"Spawn failed for goal_object: {command}")
+
     def set_velocity_for_dynamic_obstacles(self, publisher) -> None:
         msg = Twist()
         msg.linear.x = np.random.uniform(self._min_obstacle_speed, self._max_obstacle_speed)
@@ -91,6 +108,19 @@ class TimeController:
         subprocess.run(command, capture_output=True, text=True, timeout=30.0)
 
 
+class TrainingStatus:
+    def __init__(self, simulation_manager: "SimulationManager"):
+        self.service = self.create_service(simulation_manager)
+        self.goal_coordinates = [10.0, -10.0]
+
+    def handle_training_phase_request(self, request, response):
+        self.goal_coordinates = [request.goal_pos_x, request.goal_pos_y]
+        response.new_configuration = request.terminated
+        return response
+
+    def create_service(self, simulation_manager: "SimulationManager") -> None:
+        return simulation_manager.create_service(TrainingPhase, 'training_phase', self.handle_training_phase_request)
+
 
 class SimulationManager(Node):
     def __init__(self):
@@ -98,6 +128,7 @@ class SimulationManager(Node):
         self._spawned = False
         self._world_name = 'empty'
         self._dynamic_obstacles_publisher = self.create_publisher(Twist, '/model/dynamic_obstacle_rectangle/cmd_vel', 10)
+        self.timer = self.create_timer(0.1, self.manage_simulation)
 
         #   Parametrami area_size i static_obstacles_num można sterować zagęszczeniem przeszkód statycznych. 
         #   Zakres, w którym następuje spawn każdej przeszkody jest liczony od -area_size/2 do area_size/2 w obu osiach x i y.
@@ -108,10 +139,10 @@ class SimulationManager(Node):
         self.declare_parameter('max_obstacle_speed', 2.0)
 
         self._area_size = self.get_parameter('area_size').value
-        self._obstacle_controller = ObstacleController(static_obstacles_num=self.get_parameter('static_obstacles_num').value, 
-                                                      dynamic_obstacles_num=self.get_parameter('dynamic_obstacles_num').value, 
-                                                      min_obstacle_speed=self.get_parameter('min_obstacle_speed').value, 
-                                                      max_obstacle_speed=self.get_parameter('max_obstacle_speed').value)
+        self._object_controller = ObjectController(static_obstacles_num=self.get_parameter('static_obstacles_num').value, 
+                                                   dynamic_obstacles_num=self.get_parameter('dynamic_obstacles_num').value, 
+                                                   min_obstacle_speed=self.get_parameter('min_obstacle_speed').value, 
+                                                   max_obstacle_speed=self.get_parameter('max_obstacle_speed').value)
 
         #   Jeżeli if_rtf = True - wtedy setowany jest współczynnik RTF symulacji
         #   Jeżeli if_rtf = False - wybrano opcje multi - step symulacji
@@ -126,6 +157,8 @@ class SimulationManager(Node):
                                                steps=self.get_parameter('steps').value, 
                                                pause=self.get_parameter('pause').value)
 
+        self._training_status = TrainingStatus(self)
+
 
     def manage_simulation(self):
         self.prepare_obstacles()
@@ -135,9 +168,10 @@ class SimulationManager(Node):
         if self._spawned:
             return
         self._spawned = True
-        self._obstacle_controller.spawn_static_obstacles(self._area_size)
-        self._obstacle_controller.spawn_dynamic_obstacles(self._area_size)
-        self._obstacle_controller.set_velocity_for_dynamic_obstacles(self._dynamic_obstacles_publisher)
+        self._object_controller.spawn_static_obstacles(self._area_size)
+        self._object_controller.spawn_dynamic_obstacles(self._area_size)
+        self._object_controller.set_velocity_for_dynamic_obstacles(self._dynamic_obstacles_publisher)
+        self._object_controller.spawn_goal_object(self._training_status.goal_coordinates)
 
     def manage_time(self):
         if self._if_rtf:

@@ -7,7 +7,7 @@ def main():
     rclpy.init()
     simulation_manager = SimulationManager()
     try:
-        simulation_manager.manage_simulation()
+        rclpy.spin(simulation_manager)
     except KeyboardInterrupt:
         pass
     finally:

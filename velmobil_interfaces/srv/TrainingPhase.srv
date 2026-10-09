@@ -1,0 +1,5 @@
+float64 goal_pos_x
+float64 goal_pos_y
+bool terminated
+---
+bool new_configuration
