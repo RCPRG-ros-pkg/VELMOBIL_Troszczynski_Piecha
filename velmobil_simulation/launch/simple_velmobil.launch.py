@@ -85,7 +85,6 @@ def generate_launch_description():
     
 
     
-    # NODES
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -133,14 +132,15 @@ def generate_launch_description():
             '/right/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
             '/left/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
             '/imu/data@sensor_msgs/msg/Imu[gz.msgs.IMU',
-            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
-            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
-            '/front_depth_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
-            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
-            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
-            '/back_depth_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
-            '/world/empty/control@ros_gz_interfaces/srv/ControlWorld',
-            '/world/empty/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean',
+            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
+            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInf[@gz.msgs.CameraInfo',
+            '/front_depth_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
+            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
+            '/back_depth_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/world/velmobil_arena/control@ros_gz_interfaces/srv/ControlWorld@gz.msgs.WorldControl@gz.msgs.Boolean',
+            '/world/velmobil_arena/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean',
+            '/world/velmobil_arena/remove@ros_gz_interfaces/srv/DeleteEntity@gz.msgs.Entity@gz.msgs.Boolean',
             '/model/dynamic_obstacle_rectangle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
             '/gt_position@nav_msgs/msg/Odometry[gz.msgs.Odometry'
         ],
@@ -177,14 +177,13 @@ def generate_launch_description():
     )
 
 
-    # RETURN
     return LaunchDescription([
         DeclareLaunchArgument(
             'world',
             default_value=PathJoinSubstitution([
                 velmobil_simulation, 
                 'worlds', 
-                'basic.sdf'
+                'velmobil_arena.sdf'
             ]),
             description='Full path to the SDF world file to load'
         ),

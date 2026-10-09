@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <sdf version='1.9'>
-  <world name='empty'>
+  <world name='velmobil_arena'>
     <physics name="1ms" type="ode">
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>

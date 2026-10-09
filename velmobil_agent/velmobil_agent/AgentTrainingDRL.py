@@ -70,7 +70,6 @@ class AgentTrainingDRL(Node, gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         self.robot_state_data_manager.close_for_data()
-        self.get_logger().info(f"ENV RESE3")
         self.cmd_vel_pub.publish(Twist())
 
         self.reset_simulation()
@@ -81,7 +80,6 @@ class AgentTrainingDRL(Node, gym.Env):
         self.steps_this_episode = 0
         self.step_ready.clear()
         self.robot_state_data_manager.open_for_data()
-        self.get_logger().info(f"ENV RESE4")
 
         if not self.step_ready.wait(timeout=60.0):
             raise RuntimeError("Brak danych stanu po resecie - sprawdź, czy /lidar_fusion i /odom publikują")
