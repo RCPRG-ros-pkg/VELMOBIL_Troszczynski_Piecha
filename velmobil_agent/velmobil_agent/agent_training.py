@@ -7,7 +7,7 @@ from .AgentTrainingDRL import AgentTrainingDRL
 from .Model import Model
 
 TOTAL_TIMESTEPS = 100_000
-MODEL_SAVE_PATH = "velmobil_trained_model"
+MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/velmobil_trained_policy"
 
 def goal_sampler() -> np.ndarray:
     # simple randomness. Needs improvement...

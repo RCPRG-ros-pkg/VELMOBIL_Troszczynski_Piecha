@@ -12,6 +12,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'training_config'), glob('training_config/*.yaml')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
         (os.path.join('share', package_name, 'obstacles', 'static_obstacles'), glob('obstacles/static_obstacles/*.sdf')),
         (os.path.join('share', package_name, 'obstacles', 'dynamic_obstacles'), glob('obstacles/dynamic_obstacles/*.sdf')),
     ],
@@ -29,8 +30,8 @@ setup(
     entry_points={
         'console_scripts': [
             'agent_training_drl = velmobil_agent.agent_training:main',
-            'manage_simulation = velmobil_agent.manage_simulation:main',
-            'training_status = velmobil_agent.manage_simulation:main'
+            'manage_simulation = velmobil_agent.SimulationManager:main',
+            'time_control = velmobil_agent.TimeController:main',
         ],
     },
 )

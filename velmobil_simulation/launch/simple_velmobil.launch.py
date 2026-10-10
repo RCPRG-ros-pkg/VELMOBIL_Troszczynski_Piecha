@@ -142,7 +142,7 @@ def generate_launch_description():
             '/world/velmobil_arena/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean',
             '/world/velmobil_arena/remove@ros_gz_interfaces/srv/DeleteEntity@gz.msgs.Entity@gz.msgs.Boolean',
             '/model/dynamic_obstacle_rectangle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
-            '/gt_position@nav_msgs/msg/Odometry[gz.msgs.Odometry'
+            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'
         ],
         parameters=[{'use_sim_time': True}],
         output='screen'

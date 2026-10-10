@@ -62,14 +62,16 @@ Bare simulation.
 ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 start_pos_y:=10.0 floating:=False roll_yaw:=True realsense:=False
 ```
 
-### How to run simulation manager node
+### How to launch simulation manager node with training node
+Training and simulation parameters are set in `training_config/training_params.yaml`. Set `start_pos_x, start_pos_y` parameters in 
+file `SimulationManager.py` in order to get equal values with initial position.
 ```bash
-ros2 run velmobil_agent manage_simulation --ros-args -p area_size:=12 -p static_obstacles_num:=5 -p dynamic_obstacles_num:=5 -p min_obstacle_speed:=1.5 -p max_obstacle_speed:=2.5 -p if_rtf:=True -p rtf:=1.0 -p steps:=1 -p pause:=False
+ros2 launch velmobil_agent training.launch.py
 ```
 
-### How to run training node
+### How to run time controller node
 ```bash
-ros2 run velmobil_agent agent_training_drl --ros-args --params-file /root/ws/install/velmobil_agent/share/velmobil_agent/training_config/training_params.yaml
+ros2 run velmobil_agent time_control --ros-args -p rtf:=1.0 -p steps:=1 -p pause:=False
 ```
 
 ### How to control velmobil
