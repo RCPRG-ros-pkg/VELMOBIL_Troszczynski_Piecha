@@ -230,7 +230,7 @@ def generate_launch_description():
                 [PathJoinSubstitution([ros_gz_sim,
                                        'launch',
                                        'gz_sim.launch.py'])]),
-            launch_arguments=[('gz_args', [world, ' -r -v 1'])]), # GAZEBO PAUSED
+            launch_arguments=[('gz_args', [world, ' -r -v 1'])]),
 
         RegisterEventHandler(
             event_handler=OnProcessExit(

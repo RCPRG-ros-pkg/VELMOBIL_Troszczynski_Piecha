@@ -27,14 +27,12 @@ def main():
     model = Model(
         env=agent_training_drl_node, 
         model_path=None, 
-        learning_starts=4_000, 
-        train_freq=(1, "episode"), 
-        gradient_steps=200,
-        batch_size=512,
-        buffer_size=3_000,
-        policy_kwargs=dict(net_arch=[256,256]),
-        learning_rate=2e-4,
-        gamma=0.99,
+        learning_starts=5_000, 
+        train_freq=(1, "step"), 
+        gradient_steps=1,
+        batch_size=256,
+        policy_kwargs=dict(net_arch=[128,128]),
+        learning_rate=1e-3,
         verbose=1
     )
 
