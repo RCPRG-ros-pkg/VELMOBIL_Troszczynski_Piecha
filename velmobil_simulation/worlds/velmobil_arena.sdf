@@ -2,11 +2,9 @@
 <sdf version='1.9'>
   <world name='velmobil_arena'>
     <physics name="1ms" type="ode">
-      <max_step_size>0.001</max_step_size>
-      <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>1000</real_time_update_rate>
+      <max_step_size>0.01</max_step_size>
+      <real_time_factor>1000</real_time_factor>
     </physics>
-
     <plugin name='gz::sim::systems::Physics' filename='gz-sim-physics-system'/>
     <plugin name='gz::sim::systems::UserCommands' filename='gz-sim-user-commands-system'/>
     <plugin name='gz::sim::systems::SceneBroadcaster' filename='gz-sim-scene-broadcaster-system'/>

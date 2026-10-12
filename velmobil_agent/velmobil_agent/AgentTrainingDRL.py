@@ -21,13 +21,13 @@ Agent Training DRL
     - Implements reset(), step()
 + Implements Reward function
 """
-
-# LiDAR Rate : 20 Hz -> 0.05s -> 50ms => LiDAR timestamp difference = 0.04
+# max_step_size = 0.01 => one sim step = 0.01s
+# LiDAR Rate : 20 Hz -> 0.05s 
 # Odom timestamp_difference = 0.085
 
-LIDAR_TIMESTAMP_DIFFERENCE = 0.145
-ODOM_TIMESTAMP_DIFFERENCE = 0.195
-WORLD_CONTROL_MULTI_STEP = 200
+LIDAR_TIMESTAMP_DIFFERENCE = 0.470
+ODOM_TIMESTAMP_DIFFERENCE = 0.970
+WORLD_CONTROL_MULTI_STEP = 10
 
 
 class AgentTrainingDRL(Node, gym.Env):
@@ -49,7 +49,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.reset_simulation_event = threading.Event()
 
         self.declare_parameter('max_steps_per_episode', 200)
-        self.declare_parameter('collision_range', 1.0)
+        self.declare_parameter('collision_range', 0.80)
 
         self.max_steps_per_episode = self.get_parameter('max_steps_per_episode').value
         self.collision_range = self.get_parameter('collision_range').value
@@ -88,21 +88,24 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
+
+        self.steps_this_episode = 0
         self.robot_state_data_manager.close_for_data()
         self.cmd_vel_pub.publish(Twist())
 
+
         self.reset_simulation_event.clear()
         self.reset_simulation()
-        if not self.reset_simulation_event.wait(timeout=3.0):
-            self.get_logger().warn("Timeout waiting for simulation step!")
+        if not self.reset_simulation_event.wait(timeout=1.5):
+            self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
 
-        self.steps_this_episode = 0
-
+        self.step_simulation()
         self.new_data_event.clear()
         self.robot_state_data_manager.release_all() 
         self.robot_state_data_manager.open_for_data()
+
         if not self.new_data_event.wait(timeout=3.0):
-            self.get_logger().warn("Timeout waiting for new state data!")
+            self.get_logger().warn("[Reset] Timeout waiting for new state data!")
         
         observation = self.latest_state
         return observation, {}
@@ -121,14 +124,14 @@ class AgentTrainingDRL(Node, gym.Env):
         # 3. Step simulation and pause it
         self.stepped_event.clear()
         self.step_simulation()
-        if not self.stepped_event.wait(timeout=3.0):
-            self.get_logger().warn("Timeout waiting for simulation step!")
+        if not self.stepped_event.wait(timeout=1.5):
+            self.get_logger().warn("[Step] Timeout waiting for simulation step!")
             observation = self.latest_state
             return observation, 0.0, False, True, {"timeout": True}
 
         # 4. Wait for data collected after stepping simulation
         if not self.new_data_event.wait(timeout=3.0):
-            self.get_logger().warn("Timeout waiting for new state data!")
+            self.get_logger().warn("[Step] Timeout waiting for new state data!")
             observation = self.latest_state
             return observation, 0.0, False, True, {"timeout": True}
         
