@@ -78,11 +78,7 @@
   <xacro:lidar name="right" side="-1" yaw="-3.141592" />
 
   <xacro:imu />
-
-
-
-
-
+  <xacro:ground_truth/>
 
   <link name="camera_link">
     <collision>

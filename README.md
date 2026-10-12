@@ -1,7 +1,7 @@
 # VELMOBIL_Troszczynski_Piecha
 <p align="left">
   <img src="https://img.shields.io/badge/ROS-HUMBLE-blue?style=plastic">
-  <img src="https://img.shields.io/badge/Ignition-Fortress-orange?style=plastic">
+  <img src="https://img.shields.io/badge/Gazebo-Harmonic-orange?style=plastic">
   <img src="https://img.shields.io/badge/Stable-Baselines3-blue?style=plastic">
 </p> 
 
@@ -59,12 +59,19 @@ source /root/ws/install/setup.bash
 ### Running simulation
 Bare simulation.
 ```bash
-ros2 launch velmobil_simulation simple_velmobil.launch.py floating:=False roll_yaw:=True realsense:=False
+ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 start_pos_y:=10.0 realsense:=False
 ```
 
-### How to run training node
+### How to launch simulation manager node with training node
+Training and simulation parameters are set in `training_config/training_params.yaml`. Set `start_pos_x, start_pos_y` parameters in 
+file `SimulationManager.py` in order to get equal values with initial position.
 ```bash
-ros2 run velmobil_agent agent_training_drl
+ros2 launch velmobil_agent training.launch.py
+```
+
+### How to run time controller node
+```bash
+ros2 run velmobil_agent time_control --ros-args -p rtf:=1.0 -p steps:=1 -p pause:=False
 ```
 
 ### How to control velmobil
@@ -98,11 +105,6 @@ docker stop velmobil_simulation
 
 ## Github Project
 [Here](https://github.com/orgs/RCPRG-ros-pkg/projects/22/views/1) is our Task Board used for progress control/dev logs.
-
-
-## Future Dev Notes
-1. We will provide docs/dev_logs
-
 
 
 

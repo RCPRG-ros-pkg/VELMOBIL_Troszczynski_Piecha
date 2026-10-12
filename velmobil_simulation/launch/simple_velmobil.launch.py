@@ -1,6 +1,5 @@
 import os
-import xacro
-from launch import LaunchDescription, LaunchContext
+from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler, SetEnvironmentVariable
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -8,8 +7,7 @@ from launch.conditions import IfCondition
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.conditions import IfCondition, UnlessCondition
-from ament_index_python.packages import get_package_share_directory
+from launch.conditions import IfCondition
 
 
 """
@@ -87,7 +85,6 @@ def generate_launch_description():
     
 
     
-    # NODES
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -103,7 +100,10 @@ def generate_launch_description():
         executable='create',
         output='screen',
         arguments=['-topic', 'robot_description',
-                   '-name', 'velmobil', '-allow_renaming', 'true'],
+                   '-name', 'velmobil', '-allow_renaming', 'true', 
+                   '-x', LaunchConfiguration('start_pos_x'),
+                   '-y', LaunchConfiguration('start_pos_y')
+        ],
     )
 
     joint_state_broadcaster_spawner = Node(
@@ -129,16 +129,22 @@ def generate_launch_description():
         package='ros_gz_bridge',
         executable='parameter_bridge',
         arguments=[
-            '/right/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/left/scan@sensor_msgs/msg/LaserScan[ignition.msgs.LaserScan',
-            '/imu/data@sensor_msgs/msg/Imu[ignition.msgs.IMU',
-            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
-            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
-            '/front_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
-            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2@ignition.msgs.PointCloudPacked',
-            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo@ignition.msgs.CameraInfo',
-            '/back_depth_camera/image@sensor_msgs/msg/Image@ignition.msgs.Image',
-            '/world/empty/control@ros_gz_interfaces/srv/ControlWorld',
+            '/right/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/left/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+            '/imu/data@sensor_msgs/msg/Imu[gz.msgs.IMU',
+            '/front_depth_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
+            '/front_depth_camera/camera_info@sensor_msgs/msg/CameraInf[@gz.msgs.CameraInfo',
+            '/front_depth_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/back_depth_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
+            '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
+            '/back_depth_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+            '/model/velmobil/odometry_with_covariance@nav_msgs/msg/Odometry[gz.msgs.OdometryWithCovariance',
+            '/world/velmobil_arena/control@ros_gz_interfaces/srv/ControlWorld',
+            '/world/velmobil_arena/set_pose@ros_gz_interfaces/srv/SetEntityPose',
+            '/world/velmobil_arena/create@ros_gz_interfaces/srv/SpawnEntity',
+            '/world/velmobil_arena/remove@ros_gz_interfaces/srv/DeleteEntity',
+            '/model/dynamic_obstacle_rectangle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
+            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'
         ],
         parameters=[{'use_sim_time': True}],
         output='screen'
@@ -173,14 +179,13 @@ def generate_launch_description():
     )
 
 
-    # RETURN
     return LaunchDescription([
         DeclareLaunchArgument(
             'world',
             default_value=PathJoinSubstitution([
                 velmobil_simulation, 
                 'worlds', 
-                'basic.sdf'
+                'velmobil_arena.sdf'
             ]),
             description='Full path to the SDF world file to load'
         ),
@@ -188,6 +193,14 @@ def generate_launch_description():
             'use_sim_time',
             default_value='true',
             description='If true, use simulated clock'
+        ),
+        DeclareLaunchArgument(
+            'start_pos_x', 
+            default_value='0.0'
+        ),
+        DeclareLaunchArgument(
+            'start_pos_y', 
+            default_value='0.0'
         ),
         DeclareLaunchArgument(
             'rviz',
@@ -237,7 +250,6 @@ def generate_launch_description():
                 on_exit=[floating_controller_spawner],
             )
         ),
-        
         bridge,
         robot_state_publisher,
         gz_spawn_entity,

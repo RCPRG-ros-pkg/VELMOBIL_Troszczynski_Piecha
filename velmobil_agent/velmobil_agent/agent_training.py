@@ -7,7 +7,7 @@ from .AgentTrainingDRL import AgentTrainingDRL
 from .Model import Model
 
 TOTAL_TIMESTEPS = 100_000
-MODEL_SAVE_PATH = "velmobil_trained_model"
+MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/velmobil_trained_policy"
 
 def goal_sampler() -> np.ndarray:
     # simple randomness. Needs improvement...
@@ -15,7 +15,7 @@ def goal_sampler() -> np.ndarray:
 
 def main():
     rclpy.init()
-    agent_training_drl_node = AgentTrainingDRL(goal_sampler=goal_sampler)
+    agent_training_drl_node = AgentTrainingDRL()
     executor = MultiThreadedExecutor()
     executor.add_node(agent_training_drl_node)
 
@@ -24,7 +24,17 @@ def main():
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
-    model = Model(env=agent_training_drl_node, model_path=None)
+    model = Model(
+        env=agent_training_drl_node, 
+        model_path=None, 
+        learning_starts=5_000, 
+        train_freq=(1, "step"), 
+        gradient_steps=1,
+        batch_size=256,
+        policy_kwargs=dict(net_arch=[128,128]),
+        learning_rate=1e-3,
+        verbose=1
+    )
 
     try:
         model.train(total_timesteps=TOTAL_TIMESTEPS)

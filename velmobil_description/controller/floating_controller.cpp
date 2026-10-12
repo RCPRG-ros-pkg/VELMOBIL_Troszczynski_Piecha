@@ -176,7 +176,7 @@ namespace floating_controller {
         req.mutable_orientation()->set_z(std::sin(_theta / 2.0));
         req.mutable_orientation()->set_w(std::cos(_theta / 2.0));
 
-        bool executed = ign_node.Request("/world/empty/set_pose", req, timeout, rep, result);
+        bool executed = ign_node.Request("/world/velmobil_arena/set_pose", req, timeout, rep, result);
         return executed;
     }
 
