@@ -16,6 +16,7 @@
   <depend>ros_gz_sim</depend>
   <depend>ros_gz_bridge</depend>
   <depend>ros_gz_interfaces</depend>
+  <depend>velmobil_interfaces</depend>
 
   <export>
     <build_type>ament_python</build_type>

@@ -15,12 +15,14 @@ Robot States Representations (LiDAR + Odometry)
 + wait for robot state input -> preprocess -> 'acquire' -> let know RobotStateDataManager -> It encapsulates acquired data and forwards to DRL model
 """
 
-
+# STEP mode is activated if timestamp_difference is passed
 
 class RobotStateData:
-    def __init__(self, global_data_acquisitor : RobotStateDataManager):
+    def __init__(self, global_data_acquisitor : RobotStateDataManager, timestamp_difference : float = None):
         self.robot_state_data_ = {}
         self.open_for_data_ = False
+        self.last_acquired_timestamp = 0.0
+        self.timestamp_difference = timestamp_difference
         self.acquired_ = False
         self.global_data_acquisitor = global_data_acquisitor 
         self.acquisition_lock = threading.Lock()
@@ -28,6 +30,7 @@ class RobotStateData:
         with self.acquisition_lock:
             self.robot_state_data_ = {}
             self.acquired_ = False
+            self.last_acquired_timestamp = 0.0
     def get_acquired(self):
         return self.acquired_
     def get_robot_state_data(self):
@@ -37,17 +40,29 @@ class RobotStateData:
         with self.acquisition_lock:
             if self.acquired_ or not self.open_for_data_:
                 return
+            
+            if self.timestamp_difference is not None:
+                current_timestamp = data.header.stamp.sec + data.header.stamp.nanosec * 1.0e-9
+                if not current_timestamp - self.last_acquired_timestamp > self.timestamp_difference:
+                    return
+                self.last_acquired_timestamp = current_timestamp
+
             self.acquired_ = True
             self.robot_state_data_ : dict = self.convert_acquired_data(data)
         self.global_data_acquisitor.acquired()
+
+                
+
+
+
 
     def convert_acquired_data(self, data):
         return {}
 
 
 class LidarStateData(RobotStateData):
-    def __init__(self, global_data_acquisitor : RobotStateDataManager):
-        super().__init__(global_data_acquisitor)
+    def __init__(self, global_data_acquisitor : RobotStateDataManager, timestamp_difference : float = None):
+        super().__init__(global_data_acquisitor, timestamp_difference)
         self.range_max = 8.0
         self.range_min = 0.06
 
@@ -61,8 +76,8 @@ class LidarStateData(RobotStateData):
 
 
 class OdomStateData(RobotStateData):
-    def __init__(self, global_data_acquisitor : RobotStateDataManager):
-        super().__init__(global_data_acquisitor)
+    def __init__(self, global_data_acquisitor : RobotStateDataManager, timestamp_difference : float = None):
+        super().__init__(global_data_acquisitor, timestamp_difference)
         self.collect_start_point = False
 
     def set_current_goal(self, goal: np.ndarray):
@@ -92,11 +107,11 @@ Robot State Data Manager
 
 ## Brakuje jeszcze przekazywania Goal do OdomStateData, oraz jakiegoś mechanizmu informowania czy wgl zbierać dane czy nie (bo np. epizod nie ruszył)
 class RobotStateDataManager:
-    def __init__(self, agent_node : Node):
+    def __init__(self, agent_node : Node, lidar_timestamp_difference : float = None, odom_timestamp_difference : float = None):
         self.agent_node = agent_node
         self.state_data_list : list[RobotStateData] = []
         self.state_data_lock = threading.Lock()
-        self.initialize_state_data()
+        self.initialize_state_data(lidar_timestamp_difference, odom_timestamp_difference)
 
     def open_for_data(self):
         with self.state_data_lock:
@@ -110,9 +125,9 @@ class RobotStateDataManager:
                 sd.open_for_data_ = False
                 sd.release()
     
-    def initialize_state_data(self):
-        self.lidar_state_data = LidarStateData(self)
-        self.odom_state_data = OdomStateData(self)
+    def initialize_state_data(self, lidar_timestamp_difference, odom_timestamp_difference):
+        self.lidar_state_data = LidarStateData(self, lidar_timestamp_difference)
+        self.odom_state_data = OdomStateData(self, odom_timestamp_difference)
         self.state_data_list.append(self.lidar_state_data)
         self.state_data_list.append(self.odom_state_data)
 

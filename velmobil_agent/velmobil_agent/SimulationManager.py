@@ -1,24 +1,27 @@
+#!/usr/bin/env python3
 import os
 import numpy as np
 import subprocess
 from ament_index_python.packages import get_package_share_directory
+import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from rclpy.executors import MultiThreadedExecutor
+from velmobil_interfaces.srv import TrainingPhase
+from std_srvs.srv import Trigger
 
 
 """
 Simulation Manager
-
-+ Uses ObstacleController as a lower-level component responsible for spawning
-  and configuring simulation objects.
-+ Uses TimeController as a lower-level component responsible for controlling
-  the real-time factor or executing multiple simulation steps during training.
++ responsible for spawning and configuring simulation objects by low level component ObjectController.
 """
 
 
-class ObstacleController:
+class ObjectController:
     def __init__(self, static_obstacles_num: int, dynamic_obstacles_num: int, min_obstacle_speed: float, max_obstacle_speed: float):
+        self._world_name = 'velmobil_arena'
         self._static_rect_obstacle_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'static_obstacle_rect.sdf')
+        self._goal_object_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'goal_object.sdf')
         self._dynamic_rect_obstacle_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'dynamic_obstacles', 'dynamic_obstacle_rect.sdf')
         self._static_obstacles_num = static_obstacles_num
         self._dynamic_obstacles_num = dynamic_obstacles_num
@@ -29,120 +32,145 @@ class ObstacleController:
         positions = [(np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2)) for _ in range(self._static_obstacles_num)]
         procs = []
         for i, (x, y) in enumerate(positions):
-            sdf = f"""<?xml version="1.0"?>
-                <sdf version="1.9">
-                    <include>
-                        <uri>file://{self._static_rect_obstacle_path}</uri>
-                        <name>static_obstacle_{i}</name>
-                    </include>
-                </sdf>"""
-            command = ['ros2', 'run', 'ros_gz_sim', 'create','-string', sdf,'-x', str(x), '-y', str(y), '-z', '1.1']
+            command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._static_rect_obstacle_path, '-name', f'static_obstacle_{i}', '-x', str(x), '-y', str(y), '-z', '1.1']
             procs.append((i, subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)))
         for i, p in procs:
             try:
                 _, err = p.communicate(timeout=90.0)
             except subprocess.TimeoutExpired:
                 p.kill()
-                self.get_logger().error(f"Spawn failed for static_obstacle_{i}: {err.strip()}")
+                print(f"Spawn failed for static_obstacle_{i}: {err.strip()}")
 
     def spawn_dynamic_obstacles(self, area_size) -> None:
         positions_orientations = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2), np.random.uniform(-np.pi, np.pi)) for _ in range(self._dynamic_obstacles_num)]
         procs = []
         for i, (x, y, yaw) in enumerate(positions_orientations):
-            sdf = f"""<?xml version="1.0"?>
-            <sdf version="1.9">
-                <include>
-                    <uri>file://{self._dynamic_rect_obstacle_path}</uri>
-                    <name>dynamic_obstacle_{i}</name>
-                </include>
-            </sdf>"""
-            command = ['ros2', 'run', 'ros_gz_sim', 'create','-string', sdf, '-x', str(x), '-y', str(y), '-z', '1.1', '-Y', str(yaw)]
+            command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._dynamic_rect_obstacle_path, '-name', f'dynamic_obstacle_{i}', '-x', str(x), '-y', str(y), '-z', '1.1', '-Y', str(yaw)]
             procs.append((i, subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)))
         for i, p in procs:
             try:
                 _, err = p.communicate(timeout=90.0)
             except subprocess.TimeoutExpired:
                 p.kill()
-                self.get_logger().error(f"Spawn failed for dynamic_obstacle_{i}: {err.strip()}")
+                print(f"Spawn failed for dynamic_obstacle_{i}: {err.strip()}")
+
+    def remove(self, name: str):
+        req = f'name: "{name}" type: MODEL'
+        command = ['gz', 'service', '-s', f'/world/{self._world_name}/remove',
+                '--reqtype', 'gz.msgs.Entity', '--reptype', 'gz.msgs.Boolean',
+                '--timeout', '5000', '--req', req]
+        return name, subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    def remove_static_obstacles(self) -> bool:
+        procs = [self.remove(f'static_obstacle_{i}') for i in range(self._static_obstacles_num)]
+        for name, p in procs:
+            try:
+                _, err = p.communicate(timeout=30.0)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                print(f'Remove timeout for {name}: {err.strip()}', flush=True) 
+
+    def remove_dynamic_obstacles(self) -> bool:
+        procs = [self.remove(f'dynamic_obstacle_{i}') for i in range(self._dynamic_obstacles_num)]
+        for name, p in procs:
+            try:
+                _, err = p.communicate(timeout=30.0)
+            except subprocess.TimeoutExpired:
+                p.kill()
+                print(f'Remove timeout for {name}: {err.strip()}', flush=True) 
+
+    def spawn_goal_object(self, goal_coordinates: list) -> None:
+        command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._goal_object_path, '-name', 'goal_object', '-x', str(goal_coordinates[0]), '-y', str(goal_coordinates[1]), '-z', '0.0']
+        subprocess.run(command, capture_output=True, text=True, timeout=90.0)
+
+    def move_goal_object(self, goal) -> None:
+        try:
+            req = (f'name: "goal_object", position: {{x: {goal[0]}, y: {goal[1]}, z: 0.0}}, '
+                f'orientation: {{w: 1.0}}')
+            cmd = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
+                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
+                '--timeout', '2000', '--req', req]
+            subprocess.run(cmd, capture_output=True, text=True, timeout=30.0)
+        except subprocess.CalledProcessError as e:
+            print(f'move_goal_object failed : {e.output.decode()}')
 
     def set_velocity_for_dynamic_obstacles(self, publisher) -> None:
         msg = Twist()
         msg.linear.x = np.random.uniform(self._min_obstacle_speed, self._max_obstacle_speed)
         publisher.publish(msg)
 
-
-class TimeController:
-    def __init__(self, rtf: float, steps: int, pause: bool):
-        self._rtf = rtf
-        self._steps = steps
-        self._pause = pause
-
-    def set_real_time_factor(self, world_name: str) -> None:
-        command = ['gz', 'service', '-s', f'/world/{world_name}/set_physics',
-            '--reqtype', 'gz.msgs.Physics', '--reptype', 'gz.msgs.Boolean',
-            '--timeout', '2000', '--req', f'real_time_factor: {self._rtf}']
+    def teleport_robot(self, x: float, y: float) -> None:
+        req = (f'name: "velmobil", '
+            f'position: {{x: {x}, y: {y}, z: 0.1}}, '
+            f'orientation: {{x: 0, y: 0, z: 0.0, w: 1.0}}')
+        command = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
+                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
+                '--timeout', '2000', '--req', req]
         subprocess.run(command, capture_output=True, text=True, timeout=30.0)
 
-    def step_simulation(self, world_name: str) -> None:
-        req = f'pause: {str(self._pause).lower()}, multi_step: {self._steps}'
-        command = ['gz', 'service', '-s', f'/world/{world_name}/control',
-            '--reqtype', 'gz.msgs.WorldControl', '--reptype', 'gz.msgs.Boolean',
-            '--timeout', '2000', '--req', req]
-        subprocess.run(command, capture_output=True, text=True, timeout=30.0)
+
 
 
 
 class SimulationManager(Node):
     def __init__(self):
         super().__init__('simulation_manager')
-        self._spawned = False
-        self._world_name = 'empty'
-        self._dynamic_obstacles_publisher = self.create_publisher(Twist, '/model/dynamic_obstacle_rectangle/cmd_vel', 10)
+        self.get_logger().info("[SimulationManager] initialization")
+        self.robot_initial_position = [0.0, 0.0]
+        self.goal_position = [5.0, 0.0]
 
-        #   Parametrami area_size i static_obstacles_num można sterować zagęszczeniem przeszkód statycznych. 
-        #   Zakres, w którym następuje spawn każdej przeszkody jest liczony od -area_size/2 do area_size/2 w obu osiach x i y.
-        self.declare_parameter('area_size', 20)
+
+
+        self._dynamic_obstacles_publisher = self.create_publisher(Twist, '/model/dynamic_obstacle_rectangle/cmd_vel', 10)
+        self._velmobil_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
+        self._reset_service = self.create_service(Trigger, '/reset_simulation', self.handle_reset_request)
+
+
+
+        self.declare_parameter('area_size', 12)
         self.declare_parameter('static_obstacles_num', 15)
-        self.declare_parameter('dynamic_obstacles_num', 5)
+        self.declare_parameter('dynamic_obstacles_num', 0)
         self.declare_parameter('min_obstacle_speed', 0.5)
         self.declare_parameter('max_obstacle_speed', 2.0)
+        self.declare_parameter('goal_tolerance', 0.2)
+        self.declare_parameter('goal_distance', 5.0)
+
+        self.goal_tolerance = self.get_parameter('goal_tolerance').value
+        self.goal_distance = self.get_parameter('goal_distance').value
 
         self._area_size = self.get_parameter('area_size').value
-        self._obstacle_controller = ObstacleController(static_obstacles_num=self.get_parameter('static_obstacles_num').value, 
-                                                      dynamic_obstacles_num=self.get_parameter('dynamic_obstacles_num').value, 
-                                                      min_obstacle_speed=self.get_parameter('min_obstacle_speed').value, 
-                                                      max_obstacle_speed=self.get_parameter('max_obstacle_speed').value)
+        self._object_controller = ObjectController(static_obstacles_num=self.get_parameter('static_obstacles_num').value, 
+                                                   dynamic_obstacles_num=self.get_parameter('dynamic_obstacles_num').value, 
+                                                   min_obstacle_speed=self.get_parameter('min_obstacle_speed').value, 
+                                                   max_obstacle_speed=self.get_parameter('max_obstacle_speed').value)
+        self._object_controller.spawn_goal_object(self.goal_position)
 
-        #   Jeżeli if_rtf = True - wtedy setowany jest współczynnik RTF symulacji
-        #   Jeżeli if_rtf = False - wybrano opcje multi - step symulacji
-        self.declare_parameter('if_rtf', True)
-        self._if_rtf = self.get_parameter('if_rtf').value
-
-        #   rtf - real time factor
-        self.declare_parameter('rtf', 1.0)
-        self.declare_parameter('steps', 1)
-        self.declare_parameter('pause', False)
-        self._time_controller = TimeController(rtf=self.get_parameter('rtf').value, 
-                                               steps=self.get_parameter('steps').value, 
-                                               pause=self.get_parameter('pause').value)
+    def handle_reset_request(self, request, response):
+        self.get_logger().info("handle reset simulation")
+        self._object_controller.teleport_robot(self.robot_initial_position[0], self.robot_initial_position[1])
+        self._object_controller.move_goal_object(self.goal_position)
+        response.success = True
+        response.message = "simulation reset successfully"
+        return response
 
 
-    def manage_simulation(self):
-        self.prepare_obstacles()
-        self.manage_time()
-
-    def prepare_obstacles(self):
-        if self._spawned:
-            return
-        self._spawned = True
-        self._obstacle_controller.spawn_static_obstacles(self._area_size)
-        self._obstacle_controller.spawn_dynamic_obstacles(self._area_size)
-        self._obstacle_controller.set_velocity_for_dynamic_obstacles(self._dynamic_obstacles_publisher)
-
-    def manage_time(self):
-        if self._if_rtf:
-            self._time_controller.set_real_time_factor(self._world_name)
-        else:
-            self._time_controller.step_simulation(self._world_name)
 
 
+
+def main():
+    rclpy.init()
+    simulation_manager = SimulationManager()
+    executor = MultiThreadedExecutor()
+    executor.add_node(simulation_manager)
+    try:
+        executor.spin()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        executor.shutdown()
+        simulation_manager.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
