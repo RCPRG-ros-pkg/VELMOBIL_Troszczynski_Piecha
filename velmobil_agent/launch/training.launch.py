@@ -31,6 +31,6 @@ def generate_launch_description():
         manager,
         RegisterEventHandler(OnProcessStart(
             target_action=manager,
-            on_start=[TimerAction(period=12.0, actions=[agent])],
+            on_start=[TimerAction(period=3.0, actions=[agent])],
         )),
     ])

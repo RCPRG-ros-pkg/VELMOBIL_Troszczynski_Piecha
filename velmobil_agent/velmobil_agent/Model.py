@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
-from stable_baselines3 import TD3
+from stable_baselines3 import SAC
 from stable_baselines3.common.noise import NormalActionNoise
 
 """
@@ -16,11 +16,11 @@ Model
 class Model:
     def __init__(self, env=None, model_path: str = None, **td3_kwargs):
         if model_path is not None:
-            self.algo = TD3.load(model_path, env=env)
+            self.algo = SAC.load(model_path, env=env)
         elif env is not None:
             n_actions = env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-            self.algo = TD3("MlpPolicy", env, action_noise=action_noise, **td3_kwargs)
+            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.02 * np.ones(n_actions))
+            self.algo = SAC("MlpPolicy", env, action_noise=action_noise, **td3_kwargs)
         else:
             raise ValueError("Model needs either model_path (inference) or env (fresh training)")
 

@@ -11,6 +11,11 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 find_package(rosidl_default_generators REQUIRED)
 
+rosidl_generate_interfaces(${PROJECT_NAME} 
+  "srv/TrainingPhase.srv"
+)
+ament_export_dependencies(rosidl_default_runtime)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -20,11 +25,6 @@ if(BUILD_TESTING)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
-  rosidl_generate_interfaces(${PROJECT_NAME} 
-    "srv/TrainingPhase.srv"
-  )
-
-  ament_export_dependencies(rosidl_default_runtime)
 endif()
 
 ament_package()

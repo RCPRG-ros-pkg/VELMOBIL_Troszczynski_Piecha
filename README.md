@@ -59,7 +59,7 @@ source /root/ws/install/setup.bash
 ### Running simulation
 Bare simulation.
 ```bash
-ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 start_pos_y:=10.0 floating:=False roll_yaw:=True realsense:=False
+ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 start_pos_y:=10.0 realsense:=False
 ```
 
 ### How to launch simulation manager node with training node
@@ -105,11 +105,6 @@ docker stop velmobil_simulation
 
 ## Github Project
 [Here](https://github.com/orgs/RCPRG-ros-pkg/projects/22/views/1) is our Task Board used for progress control/dev logs.
-
-
-## Future Dev Notes
-1. We will provide docs/dev_logs
-
 
 
 

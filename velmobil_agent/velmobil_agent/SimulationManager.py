@@ -8,6 +8,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from rclpy.executors import MultiThreadedExecutor
 from velmobil_interfaces.srv import TrainingPhase
+from std_srvs.srv import Trigger
 
 
 """
@@ -109,63 +110,50 @@ class ObjectController:
 
 
 
+
+
 class SimulationManager(Node):
     def __init__(self):
         super().__init__('simulation_manager')
-        self._spawned = False
+        self.get_logger().info("[SimulationManager] initialization")
+        self.robot_initial_position = [0.0, 0.0]
+        self.goal_position = [5.0, 0.0]
+
+
+
         self._dynamic_obstacles_publisher = self.create_publisher(Twist, '/model/dynamic_obstacle_rectangle/cmd_vel', 10)
         self._velmobil_publisher = self.create_publisher(Twist, '/cmd_vel', 10)
-        self._training_status_service = self.create_service(TrainingPhase, 'training_phase', self.handle_training_phase_request)
-        self.timer = self.create_timer(3.0, self.manage_simulation)
+        self._reset_service = self.create_service(Trigger, '/reset_simulation', self.handle_reset_request)
 
-        #   Współrzędne celu są losowane dopiero, gdy zostanie wysłany request z terminated=True wedle funkcji goal_sampler() w pliku agent_training.py.
-        self._goal_coordinates = [10.0, -10.0]
-        self._velmobil_initial_position = [-10.0, 10.0]
 
-        #   Parametrami area_size i static_obstacles_num można sterować zagęszczeniem przeszkód statycznych. 
-        #   Zakres, w którym następuje spawn każdej przeszkody jest liczony od -area_size/2 do area_size/2 w obu osiach x i y.
-        self.declare_parameter('area_size', 20)
+
+        self.declare_parameter('area_size', 12)
         self.declare_parameter('static_obstacles_num', 15)
-        self.declare_parameter('dynamic_obstacles_num', 5)
+        self.declare_parameter('dynamic_obstacles_num', 0)
         self.declare_parameter('min_obstacle_speed', 0.5)
         self.declare_parameter('max_obstacle_speed', 2.0)
+        self.declare_parameter('goal_tolerance', 0.2)
+        self.declare_parameter('goal_distance', 5.0)
+
+        self.goal_tolerance = self.get_parameter('goal_tolerance').value
+        self.goal_distance = self.get_parameter('goal_distance').value
 
         self._area_size = self.get_parameter('area_size').value
         self._object_controller = ObjectController(static_obstacles_num=self.get_parameter('static_obstacles_num').value, 
                                                    dynamic_obstacles_num=self.get_parameter('dynamic_obstacles_num').value, 
                                                    min_obstacle_speed=self.get_parameter('min_obstacle_speed').value, 
                                                    max_obstacle_speed=self.get_parameter('max_obstacle_speed').value)
+        self._object_controller.spawn_goal_object(self.goal_position)
 
-    def set_initial_velocity_for_velmobil(self) -> None:
-        msg = Twist()
-        msg.linear.x = 0.0
-        msg.linear.y = 0.0
-        msg.angular.z = 0.0
-        self._velmobil_publisher.publish(msg)
-
-    def handle_training_phase_request(self, request, response):
-        if request.terminated:
-            self._goal_coordinates = [request.goal_pos_x, request.goal_pos_y]
-            self.set_initial_velocity_for_velmobil()
-            self._object_controller.teleport_robot(self._velmobil_initial_position[0], self._velmobil_initial_position[1])
-            self._object_controller.remove_static_obstacles()
-            self._object_controller.remove_dynamic_obstacles()
-            self._object_controller.spawn_static_obstacles(self._area_size)
-            self._object_controller.spawn_dynamic_obstacles(self._area_size)
-            self._object_controller.set_velocity_for_dynamic_obstacles(self._dynamic_obstacles_publisher)
-            self._object_controller.move_goal_object(self._goal_coordinates)
-        response.new_configuration = bool(request.terminated)
+    def handle_reset_request(self, request, response):
+        self.get_logger().info("handle reset simulation")
+        self._object_controller.teleport_robot(self.robot_initial_position[0], self.robot_initial_position[1])
+        self._object_controller.move_goal_object(self.goal_position)
+        response.success = True
+        response.message = "simulation reset successfully"
         return response
 
-    def manage_simulation(self):
-        if self._spawned:
-            return
-        self._object_controller.spawn_static_obstacles(self._area_size)
-        self._object_controller.spawn_dynamic_obstacles(self._area_size)
-        self._object_controller.set_velocity_for_dynamic_obstacles(self._dynamic_obstacles_publisher)
-        self._object_controller.spawn_goal_object(self._goal_coordinates)
-        self._spawned = True
-        self.timer.cancel() 
+
 
 
 

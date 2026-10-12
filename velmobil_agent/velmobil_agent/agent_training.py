@@ -15,7 +15,7 @@ def goal_sampler() -> np.ndarray:
 
 def main():
     rclpy.init()
-    agent_training_drl_node = AgentTrainingDRL(goal_sampler=goal_sampler)
+    agent_training_drl_node = AgentTrainingDRL()
     executor = MultiThreadedExecutor()
     executor.add_node(agent_training_drl_node)
 
@@ -24,7 +24,19 @@ def main():
     spin_thread = threading.Thread(target=executor.spin, daemon=True)
     spin_thread.start()
 
-    model = Model(env=agent_training_drl_node, model_path=None)
+    model = Model(
+        env=agent_training_drl_node, 
+        model_path=None, 
+        learning_starts=4_000, 
+        train_freq=(1, "episode"), 
+        gradient_steps=200,
+        batch_size=512,
+        buffer_size=3_000,
+        policy_kwargs=dict(net_arch=[256,256]),
+        learning_rate=2e-4,
+        gamma=0.99,
+        verbose=1
+    )
 
     try:
         model.train(total_timesteps=TOTAL_TIMESTEPS)

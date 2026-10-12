@@ -138,9 +138,11 @@ def generate_launch_description():
             '/back_depth_camera/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked',
             '/back_depth_camera/camera_info@sensor_msgs/msg/CameraInfo[gz.msgs.CameraInfo',
             '/back_depth_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
-            '/world/velmobil_arena/control@ros_gz_interfaces/srv/ControlWorld@gz.msgs.WorldControl@gz.msgs.Boolean',
-            '/world/velmobil_arena/create@ros_gz_interfaces/srv/SpawnEntity@gz.msgs.EntityFactory@gz.msgs.Boolean',
-            '/world/velmobil_arena/remove@ros_gz_interfaces/srv/DeleteEntity@gz.msgs.Entity@gz.msgs.Boolean',
+            '/model/velmobil/odometry_with_covariance@nav_msgs/msg/Odometry[gz.msgs.OdometryWithCovariance',
+            '/world/velmobil_arena/control@ros_gz_interfaces/srv/ControlWorld',
+            '/world/velmobil_arena/set_pose@ros_gz_interfaces/srv/SetEntityPose',
+            '/world/velmobil_arena/create@ros_gz_interfaces/srv/SpawnEntity',
+            '/world/velmobil_arena/remove@ros_gz_interfaces/srv/DeleteEntity',
             '/model/dynamic_obstacle_rectangle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'
         ],
@@ -194,11 +196,11 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'start_pos_x', 
-            default_value='-10.0'
+            default_value='0.0'
         ),
         DeclareLaunchArgument(
             'start_pos_y', 
-            default_value='10.0'
+            default_value='0.0'
         ),
         DeclareLaunchArgument(
             'rviz',
@@ -228,7 +230,7 @@ def generate_launch_description():
                 [PathJoinSubstitution([ros_gz_sim,
                                        'launch',
                                        'gz_sim.launch.py'])]),
-            launch_arguments=[('gz_args', [world, ' -r -v 1'])]),
+            launch_arguments=[('gz_args', [world, ' -r -v 1'])]), # GAZEBO PAUSED
 
         RegisterEventHandler(
             event_handler=OnProcessExit(
