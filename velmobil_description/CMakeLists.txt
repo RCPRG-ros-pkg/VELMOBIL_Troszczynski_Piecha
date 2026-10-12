@@ -5,7 +5,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -14,16 +14,20 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(realtime_tools REQUIRED)
-find_package(ignition-transport11 REQUIRED)
-find_package(ignition-msgs8 REQUIRED)
+find_package(gz-transport13 REQUIRED)
+find_package(gz-msgs10 REQUIRED)
 
 
 add_library(floating_controller SHARED
   controller/floating_controller.cpp
+)
+add_library(roll_yaw_controller SHARED
+  controller/roll_yaw_controller.cpp
 )
 
 
@@ -31,11 +35,15 @@ target_include_directories(floating_controller PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/controller/include>
   $<INSTALL_INTERFACE:include>
 )
+target_include_directories(roll_yaw_controller PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/controller/include>
+  $<INSTALL_INTERFACE:include>
+)
 
 
 target_link_libraries(floating_controller
-  ignition-transport11::ignition-transport11
-  ignition-msgs8::ignition-msgs8
+  gz-transport13::gz-transport13
+  gz-msgs10::gz-msgs10
 )
 
 
@@ -46,6 +54,18 @@ ament_target_dependencies(floating_controller
   pluginlib
   geometry_msgs
   tf2
+  nav_msgs
+  tf2_ros
+  realtime_tools
+)
+ament_target_dependencies(roll_yaw_controller
+  rclcpp
+  controller_interface
+  hardware_interface
+  pluginlib
+  geometry_msgs
+  tf2
+  nav_msgs
   tf2_ros
   realtime_tools
 )
@@ -54,9 +74,18 @@ ament_target_dependencies(floating_controller
 pluginlib_export_plugin_description_file(controller_interface
   controller/floating_controller.xml
 )
+pluginlib_export_plugin_description_file(controller_interface
+  controller/roll_yaw_controller.xml
+)
 
 
 install(TARGETS floating_controller
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+install(TARGETS roll_yaw_controller
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -90,6 +119,7 @@ ament_export_dependencies(
   rclcpp_lifecycle
   std_msgs
   geometry_msgs
+  nav_msgs
   tf2
   tf2_ros
   realtime_tools

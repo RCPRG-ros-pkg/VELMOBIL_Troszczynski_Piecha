@@ -1,0 +1,9 @@
+bool change_initial_pos
+bool change_goal_pos
+bool change_obstacles_pos
+---
+float64 initial_pos_x
+float64 initial_pos_y
+float64 goal_pos_x
+float64 goal_pos_y
+float64 goal_tolerance

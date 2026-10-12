@@ -9,7 +9,6 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(ira_laser_tools REQUIRED)
 
-
 install(DIRECTORY
   rviz
   gz_bridge
@@ -17,8 +16,6 @@ install(DIRECTORY
   worlds
   DESTINATION share/${PROJECT_NAME}
 )
-
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

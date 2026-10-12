@@ -1,0 +1,14 @@
+agent_training_drl_node:
+ ros__parameters:
+  max_steps_per_episode: 500
+  collision_range: 0.5
+
+simulation_manager:
+  ros__parameters:
+    area_size: 12
+    static_obstacles_num: 0
+    dynamic_obstacles_num: 0
+    min_obstacle_speed: 1.2
+    max_obstacle_speed: 2.5
+    goal_distance: 5.0
+    goal_tolerance: 0.2

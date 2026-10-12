@@ -1,0 +1,9 @@
+<library path="roll_yaw_controller">
+    <class name="roll_yaw_controller/RollYawController"
+           type="roll_yaw_controller::RollYawController"
+           base_class_type="controller_interface::ControllerInterface">
+        <description>
+            Simulates a mecanum wheel corner using an independently steered (yaw, position) and driven (roll, velocity) ball joint pair.
+        </description>
+    </class>
+</library>
