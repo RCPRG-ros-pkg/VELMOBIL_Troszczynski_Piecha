@@ -77,11 +77,11 @@ class AgentTrainingDRL(Node, gym.Env):
         self.odom_sub = self.create_subscription(Odometry, "/model/velmobil/odometry_with_covariance", self.robot_state_data_manager.odom_state_data.acquire_data, qos_profile_sensor_data)
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)   ### TEMP!!!
 
-        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(360 + 5,), dtype=np.float32)
+        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(90 + 5,), dtype=np.float32)
 
     def predict_action(self, data):
         self.latest_full_state = data
-        self.latest_state = np.concatenate([data["lidar"]["normalized_ranges"], data["odom"]["normalized_distance"]]) # 360(norm-lidar) + 5(norm-distance,norm-bearing,vx,vy,omega)
+        self.latest_state = np.concatenate([data["lidar"]["processed_ranges"], data["odom"]["normalized_distance"]]) # 90(processed-lidar) + 5(norm-distance,norm-bearing,vx,vy,omega)
         self.new_data_event.set()
 
 
