@@ -3,7 +3,7 @@ uint8 STAGE_UP = 2
 uint8 STAGE_DOWN = 3
 
 bool change_start_goal
-uint8 change_stage = 0
+uint8 change_stage
 ---
 float64 initial_pos_x
 float64 initial_pos_y
