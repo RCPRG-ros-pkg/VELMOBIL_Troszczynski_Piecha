@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import numpy as np
+import sys
+sys.modules['cv2'] = None 
 from stable_baselines3 import SAC
 from stable_baselines3.common.noise import NormalActionNoise
 
