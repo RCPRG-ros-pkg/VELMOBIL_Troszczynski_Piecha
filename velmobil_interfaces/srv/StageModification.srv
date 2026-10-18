@@ -1,0 +1,14 @@
+uint8 STAGE_REROLL = 1
+uint8 STAGE_UP = 2
+uint8 STAGE_DOWN = 3
+
+bool change_start_goal
+uint8 change_stage = 0
+---
+float64 initial_pos_x
+float64 initial_pos_y
+float64 goal_pos_x
+float64 goal_pos_y
+float64 goal_tolerance
+bool success
+string message

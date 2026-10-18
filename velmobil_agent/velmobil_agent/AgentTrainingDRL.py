@@ -60,7 +60,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
         # self.simulation_manager_client = self.create_client(TrainingPhase, '/training_phase')
         self.simulation_step_client = self.create_client(ControlWorld, '/world/velmobil_arena/control')
-        self.reset_simulation_client = self.create_client(Trigger, '/reset_simulation')
+        self.quick_reset_simulation_client = self.create_client(Trigger, '/quick_reset_simulation')
 
 
     def initialize_action_utils(self):
@@ -95,7 +95,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
 
         self.reset_simulation_event.clear()
-        self.reset_simulation()
+        self.quick_reset_simulation()
         if not self.reset_simulation_event.wait(timeout=1.5):
             self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
 
@@ -140,14 +140,14 @@ class AgentTrainingDRL(Node, gym.Env):
 
         return observation, reward, terminated, truncated, info
 
-    def reset_simulation(self):
+    def quick_reset_simulation(self):
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)   ### TEMP!!!
         self.previous_normalized_goal_distance = 1.0
         self.episode_reward = 0.0
-        future = self.reset_simulation_client.call_async(Trigger.Request())
-        future.add_done_callback(self.reset_simulation_callback)
+        future = self.quick_reset_simulation_client.call_async(Trigger.Request())
+        future.add_done_callback(self.quick_reset_simulation_callback)
 
-    def reset_simulation_callback(self, future):
+    def quick_reset_simulation_callback(self, future):
         result : Trigger.Response = future.result()
         if not result.success:
             self.get_logger().error("Couldn't reset the simulation")
