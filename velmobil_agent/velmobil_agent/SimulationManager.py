@@ -182,7 +182,7 @@ class SimulationManager(Node):
         obstacles = np.array(obstacles, dtype=float).reshape(-1, 2)
         while True:
             start_position = np.random.uniform(-((self.arena_size-1)/2), ((self.arena_size-1)/2), size=(2,))
-            goal_position_vec = np.random.rand(2)
+            goal_position_vec = np.random.uniform(-1.0, 1.0, size=(2,))
             goal_position = self.stage_settings[self.current_stage_name].goal_distance * (goal_position_vec / np.linalg.norm(goal_position_vec)) + start_position
 
             if np.all(np.linalg.norm(obstacles - start_position, axis=1) > 1.5) & np.all(np.linalg.norm(obstacles - goal_position, axis=1) > 1.5):

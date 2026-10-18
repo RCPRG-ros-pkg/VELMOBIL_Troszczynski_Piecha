@@ -25,14 +25,14 @@ def main():
     spin_thread.start()
 
     model = Model(
+        device="cuda",
         env=agent_training_drl_node, 
         model_path=None, 
         learning_starts=5_000, 
-        train_freq=(1, "step"), 
-        gradient_steps=1,
+        train_freq=(1, "episode"), 
+        gradient_steps=-1,
         batch_size=256,
-        policy_kwargs=dict(net_arch=[128,128]),
-        learning_rate=1e-3,
+        learning_rate=3e-4,
         verbose=1
     )
 
