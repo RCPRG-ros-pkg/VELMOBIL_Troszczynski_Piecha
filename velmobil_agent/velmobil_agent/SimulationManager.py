@@ -31,6 +31,7 @@ class ObjectController:
         self._world_name = 'velmobil_arena'
         self._static_rect_obstacle_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'static_obstacle_rect.sdf')
         self._goal_object_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'goal_object.sdf')
+        self._start_object_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'start_object.sdf')
         self._dynamic_rect_obstacle_path = os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'dynamic_obstacles', 'dynamic_obstacle_rect.sdf')
         self._static_obstacles_num = static_obstacles_num
         self._dynamic_obstacles_num = dynamic_obstacles_num
@@ -45,14 +46,13 @@ class ObjectController:
         self._min_obstacle_speed = stage_settings.min_obstacle_speed
         self._max_obstacle_speed = stage_settings.max_obstacle_speed
 
-    def spawn_static_obstacles(self, area_size, start_position: np.ndarray, goal_position: np.ndarray) -> None:
+    def spawn_static_obstacles(self, area_size) -> None:
         picked_positions = 0
-        while picked_positions < self.static_obstacles_num:
+        while picked_positions < self._static_obstacles_num:
             position = [(np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2))]
             if position not in self.static_obstacle_positions:
-                if np.linalg.norm(position, start_position) > 2.0 & np.linalg.norm(position, goal_position) > 2.0:
-                    self.static_obstacle_positions.append(position)
-                    picked_positions += 1
+                self.static_obstacle_positions.append(position)
+                picked_positions += 1
         procs = []
         for i, (x, y) in enumerate(self.static_obstacle_positions):
             command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._static_rect_obstacle_path, '-name', f'static_obstacle_{i}', '-x', str(x), '-y', str(y), '-z', '1.1']
@@ -106,10 +106,23 @@ class ObjectController:
     def spawn_goal_object(self, goal_coordinates: list) -> None:
         command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._goal_object_path, '-name', 'goal_object', '-x', str(goal_coordinates[0]), '-y', str(goal_coordinates[1]), '-z', '0.0']
         subprocess.run(command, capture_output=True, text=True, timeout=90.0)
-
     def move_goal_object(self, goal) -> None:
         try:
             req = (f'name: "goal_object", position: {{x: {goal[0]}, y: {goal[1]}, z: 0.0}}, '
+                f'orientation: {{w: 1.0}}')
+            cmd = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
+                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
+                '--timeout', '2000', '--req', req]
+            subprocess.run(cmd, capture_output=True, text=True, timeout=30.0)
+        except subprocess.CalledProcessError as e:
+            print(f'move_goal_object failed : {e.output.decode()}')
+
+    def spawn_start_object(self, start_coordinates: list) -> None:
+        command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._start_object_path, '-name', 'start_object', '-x', str(start_coordinates[0]), '-y', str(start_coordinates[1]), '-z', '0.0']
+        subprocess.run(command, capture_output=True, text=True, timeout=90.0)
+    def move_start_object(self, start) -> None:
+        try:
+            req = (f'name: "start_object", position: {{x: {start[0]}, y: {start[1]}, z: 0.0}}, '
                 f'orientation: {{w: 1.0}}')
             cmd = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
                 '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
@@ -161,13 +174,14 @@ class SimulationManager(Node):
                                                    min_obstacle_speed=self.stage_settings[self.current_stage_name].min_obstacle_speed, 
                                                    max_obstacle_speed=self.stage_settings[self.current_stage_name].max_obstacle_speed)
         self._object_controller.spawn_goal_object([0.0, 0.0])
+        self._object_controller.spawn_start_object([0.0, 0.0])
         self.get_logger().info(f"[SimulationManager] Initialized Object Controller for {self.current_stage_name}")
 
 
     def set_start_goal_position(self, obstacles : list[list[float]] = []):
         obstacles = np.array(obstacles, dtype=float).reshape(-1, 2)
         while True:
-            start_position = np.random.uniform(-(self.arena_size-1), (self.arena_size-1), size=(2,))
+            start_position = np.random.uniform(-((self.arena_size-1)/2), ((self.arena_size-1)/2), size=(2,))
             goal_position_vec = np.random.rand(2)
             goal_position = self.stage_settings[self.current_stage_name].goal_distance * (goal_position_vec / np.linalg.norm(goal_position_vec)) + start_position
 
@@ -181,9 +195,10 @@ class SimulationManager(Node):
     def handle_quick_reset_request(self, request, response):
         self.get_logger().info("handle quick reset simulation")
         self._object_controller.teleport_robot(self.start_position)
-        self._object_controller.move_goal_object(self.goal_positionition)
+        self._object_controller.move_goal_object(self.goal_position)
+        self._object_controller.move_start_object(self.start_position)
         response.success = True
-        response.message = "| Simulation quick reset executed successfully"
+        response.message = "\n| Simulation quick reset executed successfully\n"
         return response
 
     def handle_hard_reset_request(self, request, response):
@@ -212,12 +227,13 @@ class SimulationManager(Node):
 
 
         self._object_controller.teleport_robot(self.start_position)
-        self._object_controller.move_goal_object(self.goal_positionition)
+        self._object_controller.move_goal_object(self.goal_position)
+        self._object_controller.move_start_object(self.start_position)
 
         response.initial_pos_x = self.start_position[0]
         response.initial_pos_y = self.start_position[1]
-        response.goal_position_x = self.goal_position[0]
-        response.goal_position_x = self.goal_position[1]
+        response.goal_pos_x = self.goal_position[0]
+        response.goal_pos_x = self.goal_position[1]
         response.goal_tolerance = self.stage_settings[self.current_stage_name].goal_tolerance
         response.success = True
         response.message = f"\n| Current Stage Level: {self.current_stage_name}\n"
