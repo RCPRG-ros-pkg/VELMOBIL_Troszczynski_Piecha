@@ -86,14 +86,17 @@ class OdomStateData(RobotStateData):
     
     def convert_acquired_data(self, data: Odometry):
         odom_data = {}
-        odom_data["current_pose"] = np.array([data.pose.pose.position.x, data.pose.pose.position.y, 2 * np.arcsin(data.pose.pose.orientation.z)]) #arcsin bo to jest z quaterniona, a chcemy yaw.
+        q = data.pose.pose.orientation
+        yaw = np.arctan2(2.0*(q.w + q.z + q.x + q.y), 1.0 - 2.0 * (q.y**2 + q.z**2))
+        odom_data["current_pose"] = np.array([data.pose.pose.position.x, data.pose.pose.position.y, yaw])
         odom_data["current_velocity"] = np.array([data.twist.twist.linear.x, data.twist.twist.linear.y, data.twist.twist.angular.z])
         odom_data["current_distance"] = np.linalg.norm(self.current_goal[:2] - odom_data["current_pose"][:2])
         if self.collect_start_point:
             self.max_distance = odom_data["current_distance"]
             self.collect_start_point = False
         relative_goal_pose = np.array([self.current_goal[0] - odom_data["current_pose"][0], self.current_goal[1] - odom_data["current_pose"][1]])
-        odom_data["bearing"] = np.arctan2(relative_goal_pose[1], relative_goal_pose[0]) - odom_data["current_pose"][2]
+        raw_bearing = np.arctan2(relative_goal_pose[1], relative_goal_pose[0]) - odom_data["current_pose"][2]
+        odom_data["bearing"] = np.arctan2(np.sin(raw_bearing), np.cos(raw_bearing))
         odom_data["normalized_distance"] = np.concatenate([np.array([odom_data["current_distance"] / self.max_distance, odom_data["bearing"] / np.pi]), odom_data["current_velocity"]])
         return odom_data
 
