@@ -87,7 +87,7 @@ class OdomStateData(RobotStateData):
     def convert_acquired_data(self, data: Odometry):
         odom_data = {}
         q = data.pose.pose.orientation
-        yaw = np.arctan2(2.0*(q.w + q.z + q.x + q.y), 1.0 - 2.0 * (q.y**2 + q.z**2))
+        yaw = np.arctan2(2.0*(q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y**2 + q.z**2))
         odom_data["current_pose"] = np.array([data.pose.pose.position.x, data.pose.pose.position.y, yaw])
         odom_data["current_velocity"] = np.array([data.twist.twist.linear.x, data.twist.twist.linear.y, data.twist.twist.angular.z])
         odom_data["current_distance"] = np.linalg.norm(self.current_goal[:2] - odom_data["current_pose"][:2])

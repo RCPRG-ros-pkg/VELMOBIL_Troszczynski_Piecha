@@ -48,7 +48,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.stepped_event = threading.Event()
         self.reset_simulation_event = threading.Event()
 
-        self.declare_parameter('max_steps_per_episode', 200)
+        self.declare_parameter('max_steps_per_episode', 250)
         self.declare_parameter('collision_range', 0.80)
 
         self.max_steps_per_episode = self.get_parameter('max_steps_per_episode').value
@@ -144,7 +144,6 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def reset_simulation(self):
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)   ### TEMP!!!
-        self.previous_normalized_goal_distance = 1.0
         self.previous_action_vector = np.array([0.0, 0.0, 0.0])
         self.episode_reward = 0.0
         future = self.reset_simulation_client.call_async(Trigger.Request())

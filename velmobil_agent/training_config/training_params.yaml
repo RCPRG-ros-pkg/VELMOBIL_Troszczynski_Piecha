@@ -1,6 +1,6 @@
 agent_training_drl_node:
  ros__parameters:
-  max_steps_per_episode: 500
+  max_steps_per_episode: 250
   collision_range: 0.5
 
 simulation_manager:
