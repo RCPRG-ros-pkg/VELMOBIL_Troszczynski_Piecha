@@ -8,7 +8,7 @@ from .Model import Model
 import matplotlib.pyplot as plt
 
 TOTAL_TIMESTEPS = 100000
-MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/velmobil_second_trained_policy"
+MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_trained_policy"
 
 def goal_sampler() -> np.ndarray:
     # simple randomness. Needs improvement...
@@ -54,7 +54,7 @@ def main():
         plt.legend()
         plt.grid()
         plt.tight_layout()
-        plt.savefig('/root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/train_logs/second_trained_policy.png')
+        plt.savefig('/root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots/PPO_episode_rewards.png')
     except KeyboardInterrupt:
         pass
     finally:
