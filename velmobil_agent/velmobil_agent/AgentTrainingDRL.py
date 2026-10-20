@@ -226,6 +226,7 @@ class AgentTrainingDRL(Node, gym.Env):
         DISTANCE_WEIGHT = 10.0
         BEARING_WEIGHT = 1.0
         PROGRESS_WEIGHT = 20.0
+        ANGULAR_VELOCITY_WEIGHT= 1.0
 
         raw_lidar = self.latest_full_state["lidar"]["raw_ranges"]
         goal_distance = self.latest_full_state["odom"]["current_distance"]
@@ -242,10 +243,11 @@ class AgentTrainingDRL(Node, gym.Env):
             reward = CRASH_WEIGHT
         else:
             constant_step_reward = -STEP_WEIGHT
+            angular_velocity_reward = -ANGULAR_VELOCITY_WEIGHT * self.latest_full_state["odom"]["current_velocity"][2]**2
             # distance_reward = DISTANCE_WEIGHT * (1 - self.latest_full_state["odom"]["normalized_distance"][0]) ** 3
-            # bearing_reward = -BEARING_WEIGHT * abs(self.latest_full_state["odom"]["normalized_distance"][1])
+            bearing_reward = -BEARING_WEIGHT * abs(self.latest_full_state["odom"]["normalized_distance"][1])
             progress_reward = PROGRESS_WEIGHT * (self.previous_normalized_goal_distance - self.latest_full_state["odom"]["normalized_distance"][0])
-            reward = constant_step_reward + progress_reward # + distance_reward + bearing_reward
+            reward = constant_step_reward + progress_reward + angular_velocity_reward + bearing_reward # + distance_reward + bearing_reward
 
         self.episode_reward += reward
         self.previous_normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
