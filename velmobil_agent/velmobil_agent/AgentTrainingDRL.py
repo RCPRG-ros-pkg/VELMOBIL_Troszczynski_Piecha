@@ -58,8 +58,6 @@ class AgentTrainingDRL(Node, gym.Env):
         self.stepped_event = threading.Event()
         self.reset_simulation_event = threading.Event()
 
-        self.declare_parameter('max_steps_per_episode', 200)
-        self.declare_parameter('collision_range', 0.80)
 
         self.max_steps_per_episode = self.get_parameter('max_steps_per_episode').value
         self.stage_shift_episodes : list[int] = self.get_parameter('stage_shift_episodes').value
@@ -122,25 +120,18 @@ class AgentTrainingDRL(Node, gym.Env):
             self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
 
         self.total_episodes += 1
+
+        self.stepped_event.clear()
         self.step_simulation()
+
         self.new_data_event.clear()
         self.robot_state_data_manager.release_all() 
         self.robot_state_data_manager.open_for_data()
 
-            self.stepped_event.clear()
-            self.step_simulation()
-            if not self.stepped_event.wait(timeout=6.0):
-                self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
-                continue
-            if not self.new_data_event.wait(timeout=6.0):
-                self.get_logger().warn("[Reset] Timeout waiting for new state data!")
-                continue    
-            start_distance = self.latest_full_state["odom"]["current_distance"]
-            if abs(start_distance - expected_distance) < RESET_DISTANCE_TOLERANCE:
-                break
-            self.get_logger().warn(f"[Reset] Attempt {attempt}: robot not at start (distance to goal {start_distance:.2f}, expected {expected_distance:.2f})")
-        else:
-            self.get_logger().error("[Reset] Failed to reset robot to start position!")
+        if not self.stepped_event.wait(timeout=6.0):
+            self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
+        if not self.new_data_event.wait(timeout=6.0):
+            self.get_logger().warn("[Reset] Timeout waiting for new state data!")   
                 
         observation = self.latest_state
         self.previous_normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
@@ -217,10 +208,6 @@ class AgentTrainingDRL(Node, gym.Env):
         self.reset_simulation_event.set()
 
 
-
-
-        
-
     def step_simulation(self):
         req = ControlWorld.Request()
         req.world_control.pause = True
@@ -258,7 +245,7 @@ class AgentTrainingDRL(Node, gym.Env):
         normalized_bearing = self.latest_full_state["odom"]["normalized_distance"][1]
         angular_velocity = self.latest_full_state["odom"]["current_velocity"][2]
 
-        collided = bool(np.any(raw_lidar < self.collision_range))
+        collided = bool(np.any(raw_lidar < COLLISION_RANGE))
         reached_goal = bool(goal_distance < self.goal_tolerance)
         terminated = collided or reached_goal
         truncated = self.steps_this_episode >= self.max_steps_per_episode
