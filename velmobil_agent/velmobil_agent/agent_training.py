@@ -7,8 +7,8 @@ from .AgentTrainingDRL import AgentTrainingDRL
 from .Model import Model
 import matplotlib.pyplot as plt
 
-TOTAL_TIMESTEPS = 100000
-MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_trained_policy"
+TOTAL_TIMESTEPS = 300000
+MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_fourth_trained_policy"
 
 def goal_sampler() -> np.ndarray:
     # simple randomness. Needs improvement...
@@ -54,7 +54,7 @@ def main():
         plt.legend()
         plt.grid()
         plt.tight_layout()
-        plt.savefig('/root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots/PPO_episode_rewards.png')
+        plt.savefig('/root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots/PPO_fourth_episode_rewards.png')
     except KeyboardInterrupt:
         pass
     finally:

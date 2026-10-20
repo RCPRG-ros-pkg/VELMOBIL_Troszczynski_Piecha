@@ -228,7 +228,9 @@
                 <ray>
                     <scan>
                         <horizontal>
-                            <samples>540</samples>
+                            <!-- Lidar merger i tak scala z dokladnoscia do 1 stopnia wiec mozna zmniejszyc z 540 do 270 punktow -->
+                            <!-- <samples>540</samples> -->
+                            <samples>270</samples>
                             <resolution>1</resolution>
                             <min_angle>-0.7853982</min_angle>
                             <max_angle>3.926991</max_angle>
@@ -246,7 +248,7 @@
                     </noise>
                 </ray>
                 <always_on>1</always_on>
-                <visualize>1</visualize>
+                <visualize>0</visualize>
                 
             </sensor>
         </gazebo>

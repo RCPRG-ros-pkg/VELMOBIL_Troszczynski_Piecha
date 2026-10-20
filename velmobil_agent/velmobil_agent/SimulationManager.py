@@ -9,7 +9,9 @@ from geometry_msgs.msg import Twist
 from rclpy.executors import MultiThreadedExecutor
 from velmobil_interfaces.srv import TrainingPhase
 from std_srvs.srv import Trigger
-
+from gz.transport13 import Node as GZNode
+from gz.msgs10.pose_pb2 import Pose
+from gz.msgs10.boolean_pb2 import Boolean
 
 """
 Simulation Manager
@@ -27,6 +29,7 @@ class ObjectController:
         self._dynamic_obstacles_num = dynamic_obstacles_num
         self._min_obstacle_speed = min_obstacle_speed
         self._max_obstacle_speed = max_obstacle_speed
+        self._gz_node = GZNode()
 
     def spawn_static_obstacles(self, area_size) -> None:
         positions = [(np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2)) for _ in range(self._static_obstacles_num)]
@@ -83,32 +86,29 @@ class ObjectController:
         command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._goal_object_path, '-name', 'goal_object', '-x', str(goal_coordinates[0]), '-y', str(goal_coordinates[1]), '-z', '0.0']
         subprocess.run(command, capture_output=True, text=True, timeout=90.0)
 
-    def move_goal_object(self, goal) -> None:
-        try:
-            req = (f'name: "goal_object", position: {{x: {goal[0]}, y: {goal[1]}, z: 0.0}}, '
-                f'orientation: {{w: 1.0}}')
-            cmd = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
-                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000', '--req', req]
-            subprocess.run(cmd, capture_output=True, text=True, timeout=30.0)
-        except subprocess.CalledProcessError as e:
-            print(f'move_goal_object failed : {e.output.decode()}')
+    def set_entity_pose(self, name: str, x: float, y: float, z: float = 0.0, timeout_ms: int = 2000) -> bool:
+        req = Pose()
+        req.name = name
+        req.position.x = float(x)
+        req.position.y = float(y)
+        req.position.z = float(z)
+        req.orientation.w = 1.0
+        result, response = self._gz_node.request(f'/world/{self._world_name}/set_pose', req, Pose, Boolean, timeout_ms)
+        if not result:
+            print(f'set_pose request failed/timed out for {name}', flush=True)
+            return False
+        return response.data
+
+    def move_goal_object(self, goal) -> bool:
+        return self.set_entity_pose('goal_object', goal[0], goal[1])
+
+    def teleport_robot(self, x: float, y: float) -> bool:
+        return self.set_entity_pose('velmobil', x, y, 0.1)
 
     def set_velocity_for_dynamic_obstacles(self, publisher) -> None:
         msg = Twist()
         msg.linear.x = np.random.uniform(self._min_obstacle_speed, self._max_obstacle_speed)
         publisher.publish(msg)
-
-    def teleport_robot(self, x: float, y: float) -> None:
-        req = (f'name: "velmobil", '
-            f'position: {{x: {x}, y: {y}, z: 0.1}}, '
-            f'orientation: {{x: 0, y: 0, z: 0.0, w: 1.0}}')
-        command = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
-                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000', '--req', req]
-        subprocess.run(command, capture_output=True, text=True, timeout=30.0)
-
-
 
 
 
@@ -147,10 +147,10 @@ class SimulationManager(Node):
 
     def handle_reset_request(self, request, response):
         self.get_logger().info("handle reset simulation")
-        self._object_controller.teleport_robot(self.robot_initial_position[0], self.robot_initial_position[1])
-        self._object_controller.move_goal_object(self.goal_position)
-        response.success = True
-        response.message = "simulation reset successfully"
+        robot_teleportation_result = self._object_controller.teleport_robot(self.robot_initial_position[0], self.robot_initial_position[1])
+        move_goal_result = self._object_controller.move_goal_object(self.goal_position)
+        response.success = robot_teleportation_result and move_goal_result
+        response.message = "simulation reset successfully" if response.success else f'reset failed (robot: {robot_teleportation_result}, goal: {move_goal_result})'
         return response
 
 

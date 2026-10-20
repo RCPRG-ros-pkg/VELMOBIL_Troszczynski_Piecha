@@ -29,6 +29,13 @@ LIDAR_TIMESTAMP_DIFFERENCE = 0.470
 ODOM_TIMESTAMP_DIFFERENCE = 0.970
 WORLD_CONTROL_MULTI_STEP = 10
 
+# 3 attempts to make reset, if robot receive data from 
+# before teleportation and start new episode with incorrect robot position. 
+RESET_MAX_ATTEMPTS = 3
+
+# Distance tolerance between start distance and expected distance
+RESET_DISTANCE_TOLERANCE = 0.3
+
 
 class AgentTrainingDRL(Node, gym.Env):
     def __init__(self):
@@ -47,6 +54,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.new_data_event = threading.Event()
         self.stepped_event = threading.Event()
         self.reset_simulation_event = threading.Event()
+        self.reset_simulation_success = False
 
         self.declare_parameter('max_steps_per_episode', 250)
         self.declare_parameter('collision_range', 0.80)
@@ -84,29 +92,42 @@ class AgentTrainingDRL(Node, gym.Env):
         self.latest_state = np.concatenate([data["lidar"]["normalized_ranges"], data["odom"]["normalized_distance"]]) # 360(norm-lidar) + 5(norm-distance,norm-bearing,vx,vy,omega)
         self.new_data_event.set()
 
-
-
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
 
         self.steps_this_episode = 0
-        self.robot_state_data_manager.close_for_data()
-        self.cmd_vel_pub.publish(Twist())
+        expected_distance = np.linalg.norm(self.goal_position - self.initial_position)
+        for attempt in range(1, RESET_MAX_ATTEMPTS + 1):
+            self.robot_state_data_manager.close_for_data()
+            self.cmd_vel_pub.publish(Twist())
 
+            self.reset_simulation_success = False
+            self.reset_simulation_event.clear()
+            self.reset_simulation()
+            if not self.reset_simulation_event.wait(timeout=6.0):
+                self.get_logger().warn("[Reset] Timeout waiting for simulation reset!")
+                continue
+            if not self.reset_simulation_success:
+                continue
+            self.new_data_event.clear()
+            self.robot_state_data_manager.release_all()
+            self.robot_state_data_manager.open_for_data()
 
-        self.reset_simulation_event.clear()
-        self.reset_simulation()
-        if not self.reset_simulation_event.wait(timeout=6.0):
-            self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
-
-        self.step_simulation()
-        self.new_data_event.clear()
-        self.robot_state_data_manager.release_all() 
-        self.robot_state_data_manager.open_for_data()
-
-        if not self.new_data_event.wait(timeout=6.0):
-            self.get_logger().warn("[Reset] Timeout waiting for new state data!")
-        
+            self.stepped_event.clear()
+            self.step_simulation()
+            if not self.stepped_event.wait(timeout=6.0):
+                self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
+                continue
+            if not self.new_data_event.wait(timeout=6.0):
+                self.get_logger().warn("[Reset] Timeout waiting for new state data!")
+                continue    
+            start_distance = self.latest_full_state["odom"]["current_distance"]
+            if abs(start_distance - expected_distance) < RESET_DISTANCE_TOLERANCE:
+                break
+            self.get_logger().warn(f"[Reset] Attempt {attempt}: robot not at start (distance to goal {start_distance:.2f}, expected {expected_distance:.2f})")
+        else:
+            self.get_logger().error("[Reset] Failed to reset robot to start position!")
+                
         observation = self.latest_state
         self.previous_normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
         return observation, {}
@@ -151,11 +172,12 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def reset_simulation_callback(self, future):
         result : Trigger.Response = future.result()
+        self.reset_simulation_success = result is not None and result.success
         if not result.success:
-            self.get_logger().error("Couldn't reset the simulation")
+            self.get_logger().error(f"Couldn't reset the simulation: {result.message if result else 'no response'}")
         else:
             self.get_logger().info(f"{result.message}")
-            self.reset_simulation_event.set()
+        self.reset_simulation_event.set()
 
     def step_simulation(self):
         req = ControlWorld.Request()
