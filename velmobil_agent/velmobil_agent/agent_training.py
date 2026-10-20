@@ -26,6 +26,7 @@ def main():
     spin_thread.start()
 
     model = Model(
+        device="cuda",
         env=agent_training_drl_node, 
         model_path=None, 
         learning_rate=3e-4,

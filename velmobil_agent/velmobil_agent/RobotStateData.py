@@ -7,6 +7,7 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
+from velmobil_agent.utilities.preprocessing import MinPooling, IPAPRecN
 
 
 """
@@ -65,12 +66,15 @@ class LidarStateData(RobotStateData):
         super().__init__(global_data_acquisitor, timestamp_difference)
         self.range_max = 8.0
         self.range_min = 0.06
+        self.min_pool = MinPooling(360, 90)
+        self.ipaprecn = IPAPRecN(beta=0.0)
 
     def convert_acquired_data(self, data: LaserScan):
         lidar_data = {}
         lidar_data["raw_ranges"] = np.nan_to_num(np.array(data.ranges), nan=self.range_max, posinf=self.range_max, neginf=self.range_min)
         ranges_clipped = np.clip(lidar_data["raw_ranges"], self.range_min, self.range_max)
-        lidar_data["normalized_ranges"] = (ranges_clipped - self.range_min) / (self.range_max - self.range_min)
+        lidar_data["lin_norm_ranges"] = (ranges_clipped - self.range_min) / (self.range_max - self.range_min)
+        lidar_data["processed_ranges"] = self.ipaprecn.process(self.min_pool.process(ranges_clipped)) # IPAPRecN + MinPooling
         return lidar_data
 
 
@@ -86,8 +90,8 @@ class OdomStateData(RobotStateData):
     
     def convert_acquired_data(self, data: Odometry):
         odom_data = {}
-        q = data.pose.pose.orientation
-        yaw = np.arctan2(2.0*(q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y**2 + q.z**2))
+        quaternion = data.pose.pose.orientation
+        yaw = np.arctan2(2.0*(quaternion.w*quaternion.z + quaternion.x*quaternion.y), 1.0 - 2.0*(quaternion.y*quaternion.y + quaternion.z*quaternion.z))
         odom_data["current_pose"] = np.array([data.pose.pose.position.x, data.pose.pose.position.y, yaw])
         odom_data["current_velocity"] = np.array([data.twist.twist.linear.x, data.twist.twist.linear.y, data.twist.twist.angular.z])
         odom_data["current_distance"] = np.linalg.norm(self.current_goal[:2] - odom_data["current_pose"][:2])
@@ -95,8 +99,8 @@ class OdomStateData(RobotStateData):
             self.max_distance = odom_data["current_distance"]
             self.collect_start_point = False
         relative_goal_pose = np.array([self.current_goal[0] - odom_data["current_pose"][0], self.current_goal[1] - odom_data["current_pose"][1]])
-        raw_bearing = np.arctan2(relative_goal_pose[1], relative_goal_pose[0]) - odom_data["current_pose"][2]
-        odom_data["bearing"] = np.arctan2(np.sin(raw_bearing), np.cos(raw_bearing))
+        bearing_raw = np.arctan2(relative_goal_pose[1], relative_goal_pose[0]) - yaw
+        odom_data["bearing"] = np.arctan2(np.sin(bearing_raw), np.cos(bearing_raw)) # Right now bearing is linearly normalized. Maybe it should be nonlinear...
         odom_data["normalized_distance"] = np.concatenate([np.array([odom_data["current_distance"] / self.max_distance, odom_data["bearing"] / np.pi]), odom_data["current_velocity"]])
         return odom_data
 

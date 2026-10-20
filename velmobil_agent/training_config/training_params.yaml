@@ -1,14 +1,34 @@
 agent_training_drl_node:
- ros__parameters:
-  max_steps_per_episode: 250
-  collision_range: 0.5
+  ros__parameters:
+    max_steps_per_episode: 250
+    stage_shift_episodes: [50, 100] # episodes for stage upshift
+    quick_reroll_episode_rate: 8 # goal_position + start_position reroll
+    hard_reroll_episode_rate: 24 # whole stage reroll
+
 
 simulation_manager:
   ros__parameters:
-    area_size: 12
-    static_obstacles_num: 0
-    dynamic_obstacles_num: 0
-    min_obstacle_speed: 1.2
-    max_obstacle_speed: 2.5
-    goal_distance: 5.0
-    goal_tolerance: 0.2
+    arena_size: 12
+    stage_names: ["s1", "s2", "s3"]
+    stages:
+      s1:
+        static_obstacles_num: 0
+        dynamic_obstacles_num: 0
+        min_obstacle_speed: 1.2
+        max_obstacle_speed: 2.5
+        goal_distance: 5.0
+        goal_tolerance: 0.5
+      s2:
+        static_obstacles_num: 10
+        dynamic_obstacles_num: 0
+        min_obstacle_speed: 1.2
+        max_obstacle_speed: 2.5
+        goal_distance: 10.0
+        goal_tolerance: 0.5
+      s3:
+        static_obstacles_num: 17
+        dynamic_obstacles_num: 0
+        min_obstacle_speed: 1.2
+        max_obstacle_speed: 2.5
+        goal_distance: 15.0
+        goal_tolerance: 0.5
