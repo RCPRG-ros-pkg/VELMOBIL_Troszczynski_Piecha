@@ -238,7 +238,7 @@ class SimulationManager(Node):
         response.initial_pos_x = self.start_position[0]
         response.initial_pos_y = self.start_position[1]
         response.goal_pos_x = self.goal_position[0]
-        response.goal_pos_x = self.goal_position[1]
+        response.goal_pos_y = self.goal_position[1]
         response.goal_tolerance = self.stage_settings[self.current_stage_name].goal_tolerance
         response.success = True
         response.message = f"\n| Current Stage Level: {self.current_stage_name}\n"
