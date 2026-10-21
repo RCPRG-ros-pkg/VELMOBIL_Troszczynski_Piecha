@@ -4,7 +4,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, Regi
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.conditions import IfCondition
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch.conditions import IfCondition
@@ -64,6 +64,7 @@ def generate_launch_description():
     roll_yaw = LaunchConfiguration('roll_yaw', default=True)
     realsense = LaunchConfiguration('realsense', default=False)
 
+    headless = LaunchConfiguration('headless', default=False)
 
     # XACRO COMMAND
     robot_description_content = Command([
@@ -222,6 +223,11 @@ def generate_launch_description():
             default_value='false',
             description='If true, realsense cameras are enabled in gazebo'
         ),
+        DeclareLaunchArgument(
+            'headless',
+            default_value='false',
+            description='If true, Gazebo runs server-only (no GUI) with headless rendering'
+        ),
 
         set_ign_path,
         
@@ -230,7 +236,7 @@ def generate_launch_description():
                 [PathJoinSubstitution([ros_gz_sim,
                                        'launch',
                                        'gz_sim.launch.py'])]),
-            launch_arguments=[('gz_args', [world, ' -r -v 1'])]),
+            launch_arguments=[('gz_args', [world, ' -r -v 1', PythonExpression(["' -s --headless-rendering' if '", headless, "'.lower() == 'true' else ''"])])]),
 
         RegisterEventHandler(
             event_handler=OnProcessExit(

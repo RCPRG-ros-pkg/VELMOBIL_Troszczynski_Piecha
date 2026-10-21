@@ -30,6 +30,13 @@ LIDAR_TIMESTAMP_DIFFERENCE = 0.470
 ODOM_TIMESTAMP_DIFFERENCE = 0.970
 WORLD_CONTROL_MULTI_STEP = 10
 
+# 3 attempts to make reset, if robot receive data from 
+# before teleportation and start new episode with incorrect robot position. 
+RESET_MAX_ATTEMPTS = 3
+
+# Distance tolerance between start distance and expected distance
+RESET_DISTANCE_TOLERANCE = 0.3
+
 
 class AgentTrainingDRL(Node, gym.Env):
     def __init__(self):
@@ -39,16 +46,18 @@ class AgentTrainingDRL(Node, gym.Env):
         self.episode_reward = 0.0
         self.steps_this_episode = 0
         self.total_episodes = 1
+        self.episode_rewards = []
 
         # TEMP!!
         self.start_position = np.array([0.0, 0.0])
         self.goal_position = np.array([5.0, 0.0])
         self.goal_tolerance = 1.0
-        self.previous_normalized_goal_distance = 1.0
+        self.previous_action_vector = np.array([0.0, 0.0, 0.0])
 
         self.new_data_event = threading.Event()
         self.stepped_event = threading.Event()
         self.reset_simulation_event = threading.Event()
+
 
         self.max_steps_per_episode = self.get_parameter('max_steps_per_episode').value
         self.stage_shift_episodes : list[int] = self.get_parameter('stage_shift_episodes').value
@@ -86,8 +95,6 @@ class AgentTrainingDRL(Node, gym.Env):
         self.latest_state = np.concatenate([data["lidar"]["processed_ranges"], data["odom"]["normalized_distance"]]) # 90(processed-lidar) + 5(norm-distance,norm-bearing,vx,vy,omega)
         self.new_data_event.set()
 
-
-
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
 
@@ -113,15 +120,21 @@ class AgentTrainingDRL(Node, gym.Env):
             self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
 
         self.total_episodes += 1
+
+        self.stepped_event.clear()
         self.step_simulation()
+
         self.new_data_event.clear()
         self.robot_state_data_manager.release_all() 
         self.robot_state_data_manager.open_for_data()
 
-        if not self.new_data_event.wait(timeout=3.0):
-            self.get_logger().warn("[Reset] Timeout waiting for new state data!")
-        
+        if not self.stepped_event.wait(timeout=6.0):
+            self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
+        if not self.new_data_event.wait(timeout=6.0):
+            self.get_logger().warn("[Reset] Timeout waiting for new state data!")   
+                
         observation = self.latest_state
+        self.previous_normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
         return observation, {}
 
 
@@ -129,6 +142,7 @@ class AgentTrainingDRL(Node, gym.Env):
     def step(self, action):
         # 1. Publish action
         self.steps_this_episode += 1
+        self.current_action_vector = np.asarray(action, dtype=np.float64)
         self.robot_action_data_manager.send_action_data(action)
 
         # 2. Release data manager, so it can wait for new state data
@@ -138,13 +152,13 @@ class AgentTrainingDRL(Node, gym.Env):
         # 3. Step simulation and pause it
         self.stepped_event.clear()
         self.step_simulation()
-        if not self.stepped_event.wait(timeout=1.5):
+        if not self.stepped_event.wait(timeout=6.0):
             self.get_logger().warn("[Step] Timeout waiting for simulation step!")
             observation = self.latest_state
             return observation, 0.0, False, True, {"timeout": True}
 
         # 4. Wait for data collected after stepping simulation
-        if not self.new_data_event.wait(timeout=3.0):
+        if not self.new_data_event.wait(timeout=6.0):
             self.get_logger().warn("[Step] Timeout waiting for new state data!")
             observation = self.latest_state
             return observation, 0.0, False, True, {"timeout": True}
@@ -156,18 +170,19 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def quick_reset_simulation(self):
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)
-        self.previous_normalized_goal_distance = 1.0
+        self.previous_action_vector = np.array([0.0, 0.0, 0.0])
         self.episode_reward = 0.0
         future = self.quick_reset_simulation_client.call_async(Trigger.Request())
         future.add_done_callback(self.quick_reset_simulation_callback)
 
     def quick_reset_simulation_callback(self, future):
         result : Trigger.Response = future.result()
+        self.reset_simulation_success = result is not None and result.success
         if result.success:
             self.get_logger().info(f"{result.message}")
             self.reset_simulation_event.set()
         else:
-            self.get_logger().error("Couldn't reset the simulation")
+            self.get_logger().error(f"Couldn't reset the simulation: {result.message if result else 'no response'}")
 
     def hard_reset_simulation(self, stage_reroll: bool = False, start_goal_reroll: bool = False, stage_up: bool = False):
         self.previous_normalized_goal_distance = 1.0
@@ -190,12 +205,8 @@ class AgentTrainingDRL(Node, gym.Env):
             self.goal_position = [result.goal_pos_x, result.goal_pos_y]
             self.goal_tolerance = result.goal_tolerance
             self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)
-            self.reset_simulation_event.set()
+        self.reset_simulation_event.set()
 
-
-
-
-        
 
     def step_simulation(self):
         req = ControlWorld.Request()
@@ -219,42 +230,49 @@ class AgentTrainingDRL(Node, gym.Env):
 
 
     def compute_step_result(self):
-
-        REACH_GOAL_WEIGHT = 15.0
-        CRASH_WEIGHT = -10.0
-        STEP_WEIGHT = 0.005
-        DISTANCE_WEIGHT = 10.0
-        BEARING_WEIGHT = 1.0
-        PROGRESS_WEIGHT = 20.0
-        ANGULAR_VELOCITY_WEIGHT= 1.0
+        
+        REACH_GOAL_WEIGHT = 2.0
+        CRASH_WEIGHT = -2.0
+        STEP_WEIGHT = 0.002                 
+        PROGRESS_WEIGHT = 2.0               
+        BEARING_WEIGHT = 0.002              
+        ANGULAR_VELOCITY_WEIGHT = 0.001
+        ACTION_SMOOTHNESS_WEIGHT = 0.002    
 
         raw_lidar = self.latest_full_state["lidar"]["raw_ranges"]
         goal_distance = self.latest_full_state["odom"]["current_distance"]
-        
+        normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
+        normalized_bearing = self.latest_full_state["odom"]["normalized_distance"][1]
+        angular_velocity = self.latest_full_state["odom"]["current_velocity"][2]
+
         collided = bool(np.any(raw_lidar < COLLISION_RANGE))
         reached_goal = bool(goal_distance < self.goal_tolerance)
         terminated = collided or reached_goal
         truncated = self.steps_this_episode >= self.max_steps_per_episode
 
-        reward = 0.0
+        progress_reward = PROGRESS_WEIGHT * (self.previous_normalized_goal_distance - normalized_goal_distance)
         if reached_goal:
-            reward = REACH_GOAL_WEIGHT
+            reward = REACH_GOAL_WEIGHT + progress_reward
         elif collided:
             reward = CRASH_WEIGHT
         else:
             constant_step_reward = -STEP_WEIGHT
-            angular_velocity_reward = -ANGULAR_VELOCITY_WEIGHT * self.latest_full_state["odom"]["current_velocity"][2]**2
-            # distance_reward = DISTANCE_WEIGHT * (1 - self.latest_full_state["odom"]["normalized_distance"][0]) ** 3
-            bearing_reward = -BEARING_WEIGHT * abs(self.latest_full_state["odom"]["normalized_distance"][1])
-            progress_reward = PROGRESS_WEIGHT * (self.previous_normalized_goal_distance - self.latest_full_state["odom"]["normalized_distance"][0])
-            reward = constant_step_reward + progress_reward + angular_velocity_reward + bearing_reward # + distance_reward + bearing_reward
+            bearing_reward = -BEARING_WEIGHT * abs(normalized_bearing)
+            angular_velocity_reward = -ANGULAR_VELOCITY_WEIGHT * angular_velocity ** 2
+            action_smoothness_reward = -ACTION_SMOOTHNESS_WEIGHT * np.sum((self.current_action_vector - self.previous_action_vector) ** 2)
 
+            reward = constant_step_reward + progress_reward + bearing_reward + angular_velocity_reward + action_smoothness_reward
+
+        reward = float(reward)
         self.episode_reward += reward
-        self.previous_normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
+        self.previous_normalized_goal_distance = normalized_goal_distance
+        self.previous_action_vector = self.current_action_vector
         if terminated or truncated:
+            self.episode_rewards.append(self.episode_reward)
             self.get_logger().info(f"Episode ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
 
         info = {"collided": collided, "reached_goal": reached_goal}
         return reward, terminated, truncated, info
+
 
 

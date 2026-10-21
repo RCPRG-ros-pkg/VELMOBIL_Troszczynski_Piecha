@@ -59,7 +59,7 @@ source /root/ws/install/setup.bash
 ### Running simulation
 Bare simulation.
 ```bash
-ros2 launch velmobil_simulation simple_velmobil.launch.py
+ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 start_pos_y:=10.0 rviz:=False realsense:=False headless:=True
 ```
 
 ### How to launch simulation manager node with training node

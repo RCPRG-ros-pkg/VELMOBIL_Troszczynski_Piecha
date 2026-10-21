@@ -5,9 +5,10 @@ import threading
 from rclpy.executors import MultiThreadedExecutor
 from .AgentTrainingDRL import AgentTrainingDRL
 from .Model import Model
+import matplotlib.pyplot as plt
 
-TOTAL_TIMESTEPS = 100_000
-MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/velmobil_trained_policy"
+TOTAL_TIMESTEPS = 300000
+MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_fourth_trained_policy"
 
 def goal_sampler() -> np.ndarray:
     # simple randomness. Needs improvement...
@@ -28,17 +29,33 @@ def main():
         device="cuda",
         env=agent_training_drl_node, 
         model_path=None, 
-        learning_starts=5_000, 
-        train_freq=(1, "episode"), 
-        gradient_steps=-1,
-        batch_size=256,
         learning_rate=3e-4,
-        verbose=1
+        batch_size=64,
+        n_steps=2048,
+        n_epochs=10,
+        policy_kwargs=dict(net_arch=[128,128]),
+        gamma=0.99,
+        verbose=1,
+        seed=0
     )
 
     try:
         model.train(total_timesteps=TOTAL_TIMESTEPS)
         model.save(MODEL_SAVE_PATH)
+        rewards = np.array(agent_training_drl_node.episode_rewards)
+        window = 20
+        plt.figure()
+        plt.plot(rewards, alpha=0.3, label='Episode reward')
+        if len(rewards) >= window:
+            moving_avg = np.convolve(rewards, np.ones(window) / window, mode='valid')
+            plt.plot(np.arange(window - 1, len(rewards)), moving_avg, label=f'Moving average')
+        plt.title('Episode rewards')
+        plt.xlabel('Episode')
+        plt.ylabel('Episode reward')
+        plt.legend()
+        plt.grid()
+        plt.tight_layout()
+        plt.savefig('/root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots/PPO_fourth_episode_rewards.png')
     except KeyboardInterrupt:
         pass
     finally:

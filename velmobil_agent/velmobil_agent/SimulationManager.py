@@ -10,6 +10,9 @@ from rclpy.executors import MultiThreadedExecutor
 from velmobil_interfaces.srv import StageModification
 from std_srvs.srv import Trigger
 from dataclasses import dataclass, fields
+from gz.transport13 import Node as GZNode
+from gz.msgs10.pose_pb2 import Pose
+from gz.msgs10.boolean_pb2 import Boolean
 
 """
 Simulation Manager
@@ -37,6 +40,15 @@ class ObjectController:
         self._dynamic_obstacles_num = dynamic_obstacles_num
         self._min_obstacle_speed = min_obstacle_speed
         self._max_obstacle_speed = max_obstacle_speed
+        self._gz_node = GZNode()
+
+        self.static_obstacle_positions = []
+
+    def set_stage_settings(self, stage_settings: StageSettings):
+        self._static_obstacles_num = stage_settings.static_obstacles_num
+        self._dynamic_obstacles_num = stage_settings.dynamic_obstacles_num
+        self._min_obstacle_speed = stage_settings.min_obstacle_speed
+        self._max_obstacle_speed = stage_settings.max_obstacle_speed
 
         self.static_obstacle_positions = []
 
@@ -49,7 +61,7 @@ class ObjectController:
     def spawn_static_obstacles(self, area_size) -> None:
         picked_positions = 0
         while picked_positions < self._static_obstacles_num:
-            position = [(np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2))]
+            position = (np.random.randint(int(-area_size / 2), int(area_size / 2)), np.random.randint(int(-area_size / 2), int(area_size / 2)))
             if position not in self.static_obstacle_positions:
                 self.static_obstacle_positions.append(position)
                 picked_positions += 1
@@ -106,44 +118,37 @@ class ObjectController:
     def spawn_goal_object(self, goal_coordinates: list) -> None:
         command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._goal_object_path, '-name', 'goal_object', '-x', str(goal_coordinates[0]), '-y', str(goal_coordinates[1]), '-z', '0.0']
         subprocess.run(command, capture_output=True, text=True, timeout=90.0)
-    def move_goal_object(self, goal) -> None:
-        try:
-            req = (f'name: "goal_object", position: {{x: {goal[0]}, y: {goal[1]}, z: 0.0}}, '
-                f'orientation: {{w: 1.0}}')
-            cmd = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
-                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000', '--req', req]
-            subprocess.run(cmd, capture_output=True, text=True, timeout=30.0)
-        except subprocess.CalledProcessError as e:
-            print(f'move_goal_object failed : {e.output.decode()}')
-
+    
     def spawn_start_object(self, start_coordinates: list) -> None:
         command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._start_object_path, '-name', 'start_object', '-x', str(start_coordinates[0]), '-y', str(start_coordinates[1]), '-z', '0.0']
         subprocess.run(command, capture_output=True, text=True, timeout=90.0)
-    def move_start_object(self, start) -> None:
-        try:
-            req = (f'name: "start_object", position: {{x: {start[0]}, y: {start[1]}, z: 0.0}}, '
-                f'orientation: {{w: 1.0}}')
-            cmd = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
-                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000', '--req', req]
-            subprocess.run(cmd, capture_output=True, text=True, timeout=30.0)
-        except subprocess.CalledProcessError as e:
-            print(f'move_goal_object failed : {e.output.decode()}')
+
+    def set_entity_pose(self, name: str, x: float, y: float, z: float = 0.0, timeout_ms: int = 2000) -> bool:
+        req = Pose()
+        req.name = name
+        req.position.x = float(x)
+        req.position.y = float(y)
+        req.position.z = float(z)
+        req.orientation.w = 1.0
+        result, response = self._gz_node.request(f'/world/{self._world_name}/set_pose', req, Pose, Boolean, timeout_ms)
+        if not result:
+            print(f'set_pose request failed/timed out for {name}', flush=True)
+            return False
+        return response.data
+
+    def move_goal_object(self, goal) -> bool:
+        return self.set_entity_pose('goal_object', goal[0], goal[1])
+
+    def move_start_object(self, start) -> bool:
+        return self.set_entity_pose('start_object', start[0], start[1])
+
+    def teleport_robot(self, position) -> bool:
+        return self.set_entity_pose('velmobil', position[0], position[1], 0.1)
 
     def set_velocity_for_dynamic_obstacles(self, publisher) -> None:
         msg = Twist()
         msg.linear.x = np.random.uniform(self._min_obstacle_speed, self._max_obstacle_speed)
         publisher.publish(msg)
-
-    def teleport_robot(self, start_positionition: list[float]) -> None:
-        req = (f'name: "velmobil", '
-            f'position: {{x: {start_positionition[0]}, y: {start_positionition[1]}, z: 0.1}}, '
-            f'orientation: {{x: 0, y: 0, z: 0.0, w: 1.0}}')
-        command = ['gz', 'service', '-s', f'/world/{self._world_name}/set_pose',
-                '--reqtype', 'gz.msgs.Pose', '--reptype', 'gz.msgs.Boolean',
-                '--timeout', '2000', '--req', req]
-        subprocess.run(command, capture_output=True, text=True, timeout=30.0)
 
 
 

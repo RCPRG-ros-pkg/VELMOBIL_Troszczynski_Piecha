@@ -18,6 +18,8 @@ docker run -d \
     -e __NV_PRIME_RENDER_OFFLOAD=1 \
     -e __GLX_VENDOR_LIBRARY_NAME=nvidia \
     -e __VK_LAYER_NV_optimus=NVIDIA_only \
+    -e GZ_IP=127.0.0.1 \
+    -e GZ_PARTITION=velmobil \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v "$SCRIPT_DIR":/root/ws/src/VELMOBIL_Troszczynski_Piecha \
     velmobil_simulation:latest
