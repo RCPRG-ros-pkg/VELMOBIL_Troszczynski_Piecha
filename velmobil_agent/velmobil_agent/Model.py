@@ -2,8 +2,9 @@
 import numpy as np
 import sys
 sys.modules['cv2'] = None 
-from stable_baselines3 import PPO
-from stable_baselines3.common.noise import NormalActionNoise
+# from stable_baselines3 import PPO
+from sbx import PPO
+# from stable_baselines3.common.noise import NormalActionNoise
 
 """
 Model
@@ -21,7 +22,7 @@ class Model:
             self.algo = PPO.load(model_path, env=env)
         elif env is not None:
             n_actions = env.action_space.shape[-1]
-            action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+            # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
             self.algo = PPO("MlpPolicy", env, **model_kwargs)#, action_noise=action_noise)
         else:
             raise ValueError("Model needs either model_path (inference) or env (fresh training)")

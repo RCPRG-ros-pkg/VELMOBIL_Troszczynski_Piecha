@@ -27,11 +27,11 @@ COLLISION_RANGE = 0.8
 # max_step_size = 0.01 => one sim step = 0.01s
 # LiDAR Rate : 20 Hz -> 0.05s 
 # Odom timestamp_difference = 0.085
-# LIDAR_TIMESTAMP_DIFFERENCE = 0.05
-# ODOM_TIMESTAMP_DIFFERENCE = 0.9
 
-LIDAR_TIMESTAMP_DIFFERENCE = 0.055
-ODOM_TIMESTAMP_DIFFERENCE = 0.095
+# LIDAR_TIMESTAMP_DIFFERENCE = 0.055
+# ODOM_TIMESTAMP_DIFFERENCE = 0.095
+LIDAR_TIMESTAMP_DIFFERENCE = None
+ODOM_TIMESTAMP_DIFFERENCE = None
 
 # 3 attempts to make reset, if robot receive data from 
 # before teleportation and start new episode with incorrect robot position. 

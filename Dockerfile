@@ -59,7 +59,8 @@ RUN source /opt/ros/humble/setup.bash && \
 RUN pip3 install --no-cache-dir \
     gymnasium \
     stable-baselines3 \
-    huggingface_sb3
+    huggingface_sb3 \
+    sbx-rl
     # tensorboard
 
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \

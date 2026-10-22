@@ -26,7 +26,7 @@
                 <material name="black"/>
             </visual>
             <inertial>
-                <mass value="1.0"/>
+                <mass value="${wheel_mass}"/>
                 <inertia ixx="0.145" ixy="0.0" ixz="0.0" iyy="0.145" iyz="0.0" izz="0.125"/>
             </inertial>
         </link>
