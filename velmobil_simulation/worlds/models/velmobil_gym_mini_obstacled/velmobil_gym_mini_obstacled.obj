@@ -1,6 +1,6 @@
 # Blender 5.2.2 LTS
 # www.blender.org
-mtllib velmobil_arena_mini_obstacled.mtl
+mtllib velmobil_gym_mini_obstacled.mtl
 o Cube.001
 v 11.947058 12.805098 0.297631
 v 11.947058 12.805098 5.433522

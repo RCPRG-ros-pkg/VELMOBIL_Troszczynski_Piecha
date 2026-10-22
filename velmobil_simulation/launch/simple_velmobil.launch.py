@@ -174,7 +174,8 @@ def generate_launch_description():
             'laserscan_topics': '/left/scan /right/scan',
             'angle_increment': 0.0174533,
             'range_min': 0.06,
-            'range_max': 5.0
+            'range_max': 5.0,
+            'use_sim_time': True
         }],
         output='screen'
     )

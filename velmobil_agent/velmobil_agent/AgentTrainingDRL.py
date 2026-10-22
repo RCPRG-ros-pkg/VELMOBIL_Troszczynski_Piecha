@@ -21,14 +21,17 @@ Agent Training DRL
     - Implements reset(), step()
 + Implements Reward function
 """
+WORLD_CONTROL_MULTI_STEP = 11
+COLLISION_RANGE = 0.8
+
 # max_step_size = 0.01 => one sim step = 0.01s
 # LiDAR Rate : 20 Hz -> 0.05s 
 # Odom timestamp_difference = 0.085
+# LIDAR_TIMESTAMP_DIFFERENCE = 0.05
+# ODOM_TIMESTAMP_DIFFERENCE = 0.9
 
-COLLISION_RANGE = 0.8
-LIDAR_TIMESTAMP_DIFFERENCE = 0.470
-ODOM_TIMESTAMP_DIFFERENCE = 0.970
-WORLD_CONTROL_MULTI_STEP = 10
+LIDAR_TIMESTAMP_DIFFERENCE = 0.055
+ODOM_TIMESTAMP_DIFFERENCE = 0.095
 
 # 3 attempts to make reset, if robot receive data from 
 # before teleportation and start new episode with incorrect robot position. 
@@ -45,7 +48,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
         self.episode_reward = 0.0
         self.steps_this_episode = 0
-        self.total_episodes = 1
+        self.total_episodes = 0
         self.episode_rewards = []
 
         # TEMP!!
@@ -71,12 +74,11 @@ class AgentTrainingDRL(Node, gym.Env):
         self.quick_reset_simulation_client = self.create_client(Trigger, '/quick_reset_simulation')
         self.hard_reset_simulation_client = self.create_client(StageModification, '/hard_reset_simulation')
 
-        self.hard_reset_simulation(stage_reroll=True)
 
 
     def initialize_action_utils(self):
         self.robot_action_data_manager = RobotActionDataManager(self)
-        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 1)
 
         self.action_space = Box(low=np.array([-1.0, -1.0, -1.0]),
                                 high=np.array([1.0, 1.0, 1.0]),
@@ -85,7 +87,7 @@ class AgentTrainingDRL(Node, gym.Env):
     def initialize_state_utils(self):
         self.robot_state_data_manager = RobotStateDataManager(self, lidar_timestamp_difference=LIDAR_TIMESTAMP_DIFFERENCE, odom_timestamp_difference=ODOM_TIMESTAMP_DIFFERENCE)
         self.lidar_sub = self.create_subscription(LaserScan, "/lidar_fusion", self.robot_state_data_manager.lidar_state_data.acquire_data, qos_profile_sensor_data)
-        self.odom_sub = self.create_subscription(Odometry, "/model/velmobil/odometry_with_covariance", self.robot_state_data_manager.odom_state_data.acquire_data, qos_profile_sensor_data)
+        self.odom_sub = self.create_subscription(Odometry, "/model/velmobil/odometry_with_covariance", self.robot_state_data_manager.odom_state_data.acquire_data, 10)
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)   ### TEMP!!!
 
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(90 + 5,), dtype=np.float32)
@@ -101,6 +103,9 @@ class AgentTrainingDRL(Node, gym.Env):
         self.steps_this_episode = 0
         self.robot_state_data_manager.close_for_data()
         self.cmd_vel_pub.publish(Twist())
+
+        self.stepped_event.clear()
+        self.new_data_event.clear()
 
         self.reset_simulation_event.clear()
         if self.total_episodes == self.stage_shift_episodes[0]:
@@ -121,12 +126,12 @@ class AgentTrainingDRL(Node, gym.Env):
 
         self.total_episodes += 1
 
-        self.stepped_event.clear()
-        self.step_simulation()
-
-        self.new_data_event.clear()
+        self.robot_state_data_manager.zero_last_acquired_timestamp_all()
         self.robot_state_data_manager.release_all() 
         self.robot_state_data_manager.open_for_data()
+
+        self.step_simulation()
+
 
         if not self.stepped_event.wait(timeout=6.0):
             self.get_logger().warn("[Reset] Timeout waiting for simulation step!")
@@ -211,7 +216,7 @@ class AgentTrainingDRL(Node, gym.Env):
     def step_simulation(self):
         req = ControlWorld.Request()
         req.world_control.pause = True
-        req.world_control.step = True
+        # req.world_control.step = True
         req.world_control.multi_step = WORLD_CONTROL_MULTI_STEP
         future = self.simulation_step_client.call_async(req)
         future.add_done_callback(self.step_simulation_callback)
@@ -231,13 +236,13 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def compute_step_result(self):
         
-        REACH_GOAL_WEIGHT = 2.0
-        CRASH_WEIGHT = -2.0
+        REACH_GOAL_WEIGHT = 10.0
+        CRASH_WEIGHT = -10.0
         STEP_WEIGHT = 0.002                 
         PROGRESS_WEIGHT = 2.0               
         BEARING_WEIGHT = 0.002              
-        ANGULAR_VELOCITY_WEIGHT = 0.001
-        ACTION_SMOOTHNESS_WEIGHT = 0.002    
+        ANGULAR_VELOCITY_WEIGHT = 0.000
+        ACTION_SMOOTHNESS_WEIGHT = 0.02    
 
         raw_lidar = self.latest_full_state["lidar"]["raw_ranges"]
         goal_distance = self.latest_full_state["odom"]["current_distance"]
@@ -269,7 +274,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.previous_action_vector = self.current_action_vector
         if terminated or truncated:
             self.episode_rewards.append(self.episode_reward)
-            self.get_logger().info(f"Episode ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
+            self.get_logger().info(f"Episode {self.total_episodes} ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
 
         info = {"collided": collided, "reached_goal": reached_goal}
         return reward, terminated, truncated, info

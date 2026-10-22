@@ -31,7 +31,10 @@ class RobotStateData:
         with self.acquisition_lock:
             self.robot_state_data_ = {}
             self.acquired_ = False
-            self.last_acquired_timestamp = 0.0
+
+    def zero_last_acquired_timestamp(self):
+        self.last_acquired_timestamp = 0.0
+
     def get_acquired(self):
         return self.acquired_
     def get_robot_state_data(self):
@@ -44,9 +47,11 @@ class RobotStateData:
             
             if self.timestamp_difference is not None:
                 current_timestamp = data.header.stamp.sec + data.header.stamp.nanosec * 1.0e-9
-                if not current_timestamp - self.last_acquired_timestamp > self.timestamp_difference:
+                # print(f"{type(data).__name__} CHECK TIMESTAMP: {(current_timestamp - self.last_acquired_timestamp):.3f}")
+                if not ((current_timestamp - self.last_acquired_timestamp) > self.timestamp_difference):
                     return
                 self.last_acquired_timestamp = current_timestamp
+                # print(f"{type(data).__name__} GOT GOOD DATA!")
 
             self.acquired_ = True
             self.robot_state_data_ : dict = self.convert_acquired_data(data)
@@ -142,6 +147,11 @@ class RobotStateDataManager:
         with self.state_data_lock:
             for sd in self.state_data_list:
                 sd.release()
+
+    def zero_last_acquired_timestamp_all(self):
+        with self.state_data_lock:
+            for sd in self.state_data_list:
+                sd.zero_last_acquired_timestamp()
     
     def acquired(self):
         with self.state_data_lock:

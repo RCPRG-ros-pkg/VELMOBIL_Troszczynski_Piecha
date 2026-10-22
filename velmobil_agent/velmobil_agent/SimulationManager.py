@@ -123,7 +123,7 @@ class ObjectController:
         command = ['ros2', 'run', 'ros_gz_sim', 'create','-file', self._start_object_path, '-name', 'start_object', '-x', str(start_coordinates[0]), '-y', str(start_coordinates[1]), '-z', '0.0']
         subprocess.run(command, capture_output=True, text=True, timeout=90.0)
 
-    def set_entity_pose(self, name: str, x: float, y: float, z: float = 0.0, timeout_ms: int = 2000) -> bool:
+    def set_entity_pose(self, name: str, x: float, y: float, z: float = 0.0, timeout_ms: int = 5000) -> bool:
         req = Pose()
         req.name = name
         req.position.x = float(x)
@@ -190,6 +190,9 @@ class SimulationManager(Node):
             goal_position_vec = np.random.uniform(-1.0, 1.0, size=(2,))
             goal_position = self.stage_settings[self.current_stage_name].goal_distance * (goal_position_vec / np.linalg.norm(goal_position_vec)) + start_position
 
+            if bool(np.any(goal_position < -((self.arena_size-1)/2))) or bool(np.any(goal_position > ((self.arena_size-1)/2))):
+                continue
+
             if np.all(np.linalg.norm(obstacles - start_position, axis=1) > 1.5) & np.all(np.linalg.norm(obstacles - goal_position, axis=1) > 1.5):
                 self.goal_position = goal_position
                 self.start_position = start_position
@@ -199,9 +202,17 @@ class SimulationManager(Node):
 
     def handle_quick_reset_request(self, request, response):
         self.get_logger().info("handle quick reset simulation")
-        self._object_controller.teleport_robot(self.start_position)
-        self._object_controller.move_goal_object(self.goal_position)
-        self._object_controller.move_start_object(self.start_position)
+        robot_moved = self._object_controller.teleport_robot(self.start_position)
+        goal_moved = self._object_controller.move_goal_object(self.goal_position)
+        start_moved = self._object_controller.move_start_object(self.start_position)
+
+        if not robot_moved:
+            self.get_logger().warn("Robot not moved")
+        if not goal_moved:
+            self.get_logger().warn("Goal marker not moved")
+        if not start_moved:
+            self.get_logger().warn("Start marker not moved")
+
         response.success = True
         response.message = "\n| Simulation quick reset executed successfully\n"
         return response
@@ -227,13 +238,20 @@ class SimulationManager(Node):
 
             self.set_start_goal_position(self._object_controller.static_obstacle_positions)
 
-        elif request.change_stage == 0 & request.change_start_goal:
+        elif request.change_stage == 0:
             self.set_start_goal_position(self._object_controller.static_obstacle_positions)
 
 
-        self._object_controller.teleport_robot(self.start_position)
-        self._object_controller.move_goal_object(self.goal_position)
-        self._object_controller.move_start_object(self.start_position)
+        robot_moved = self._object_controller.teleport_robot(self.start_position)
+        goal_moved = self._object_controller.move_goal_object(self.goal_position)
+        start_moved = self._object_controller.move_start_object(self.start_position)
+
+        if not robot_moved:
+            self.get_logger().warn("Robot not moved")
+        if not goal_moved:
+            self.get_logger().warn("Goal marker not moved")
+        if not start_moved:
+            self.get_logger().warn("Start marker not moved")
 
         response.initial_pos_x = self.start_position[0]
         response.initial_pos_y = self.start_position[1]
@@ -243,6 +261,8 @@ class SimulationManager(Node):
         response.success = True
         response.message = f"\n| Current Stage Level: {self.current_stage_name}\n"
         response.message += f"| New Stage: Yes\n" if request.change_stage != 0 else "| New Stage: No\n"
+        response.message += f"| Current Start: [{self.start_position[0]}; {self.start_position[1]}]\n"
+        response.message += f"| Current Goal: [{self.goal_position[0]}; {self.goal_position[1]}]\n"
         return response
 
 
