@@ -251,7 +251,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
         self.episode_reward += reward
         self.previous_normalized_goal_distance = training_signals.normalized_goal_distance
-        self.previous_action_vector = self.current_action_vector
+        self.previous_action_vector = training_signals.current_action_vector
         if terminated or truncated:
             self.episode_rewards.append(self.episode_reward)
             self.get_logger().info(f"Episode {self.total_episodes} ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {training_signals.goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
