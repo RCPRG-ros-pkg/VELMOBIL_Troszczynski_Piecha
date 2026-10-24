@@ -14,6 +14,8 @@ from ros_gz_interfaces.srv import ControlWorld
 from velmobil_interfaces.srv import StageModification
 from std_srvs.srv import Trigger
 
+from velmobil_agent.utilities.reward_function import TrainingSignals, RewardFunction
+
 """
 Agent Training DRL
 + Wraps Ignition+ROS with gymnasium.Env interface
@@ -229,55 +231,30 @@ class AgentTrainingDRL(Node, gym.Env):
             self.get_logger().error("Failed to step simulation!")
         
 
-
-
-
-
-
     def compute_step_result(self):
-        
-        REACH_GOAL_WEIGHT = 10.0
-        CRASH_WEIGHT = -10.0
-        STEP_WEIGHT = 0.002                 
-        PROGRESS_WEIGHT = 2.0               
-        BEARING_WEIGHT = 0.002              
-        ANGULAR_VELOCITY_WEIGHT = 0.000
-        ACTION_SMOOTHNESS_WEIGHT = 0.02    
+        training_signals = TrainingSignals(
+            self.latest_full_state["lidar"]["raw_ranges"],
+            self.latest_full_state["odom"]["current_distance"],
+            self.latest_full_state["odom"]["normalized_distance"][0],
+            self.latest_full_state["odom"]["normalized_distance"][1],
+            self.latest_full_state["odom"]["current_velocity"][2],
+            self.previous_normalized_goal_distance,
+            self.current_action_vector,
+            self.previous_action_vector
+        )
 
-        raw_lidar = self.latest_full_state["lidar"]["raw_ranges"]
-        goal_distance = self.latest_full_state["odom"]["current_distance"]
-        normalized_goal_distance = self.latest_full_state["odom"]["normalized_distance"][0]
-        normalized_bearing = self.latest_full_state["odom"]["normalized_distance"][1]
-        angular_velocity = self.latest_full_state["odom"]["current_velocity"][2]
+        reward_function = RewardFunction('rf_2')
+        reward, collided, reached_goal = reward_function(training_signals, COLLISION_RANGE, self.goal_tolerance)
 
-        collided = bool(np.any(raw_lidar < COLLISION_RANGE))
-        reached_goal = bool(goal_distance < self.goal_tolerance)
         terminated = collided or reached_goal
         truncated = self.steps_this_episode >= self.max_steps_per_episode
 
-        progress_reward = PROGRESS_WEIGHT * (self.previous_normalized_goal_distance - normalized_goal_distance)
-        if reached_goal:
-            reward = REACH_GOAL_WEIGHT + progress_reward
-        elif collided:
-            reward = CRASH_WEIGHT
-        else:
-            constant_step_reward = -STEP_WEIGHT
-            bearing_reward = -BEARING_WEIGHT * abs(normalized_bearing)
-            angular_velocity_reward = -ANGULAR_VELOCITY_WEIGHT * angular_velocity ** 2
-            action_smoothness_reward = -ACTION_SMOOTHNESS_WEIGHT * np.sum((self.current_action_vector - self.previous_action_vector) ** 2)
-
-            reward = constant_step_reward + progress_reward + bearing_reward + angular_velocity_reward + action_smoothness_reward
-
-        reward = float(reward)
         self.episode_reward += reward
-        self.previous_normalized_goal_distance = normalized_goal_distance
+        self.previous_normalized_goal_distance = training_signals.normalized_goal_distance
         self.previous_action_vector = self.current_action_vector
         if terminated or truncated:
             self.episode_rewards.append(self.episode_reward)
-            self.get_logger().info(f"Episode {self.total_episodes} ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
+            self.get_logger().info(f"Episode {self.total_episodes} ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {training_signals.goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
 
         info = {"collided": collided, "reached_goal": reached_goal}
         return reward, terminated, truncated, info
-
-
-
