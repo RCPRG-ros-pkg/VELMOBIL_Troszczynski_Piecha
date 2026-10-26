@@ -1,5 +1,6 @@
 simulation_manager:
   ros__parameters:
+    seed: 42
     arena_size: 12
     stage_names: ["s1"]
     stages:

@@ -50,14 +50,6 @@ class ObjectController:
         self._min_obstacle_speed = stage_settings.min_obstacle_speed
         self._max_obstacle_speed = stage_settings.max_obstacle_speed
 
-        self.static_obstacle_positions = []
-
-    def set_stage_settings(self, stage_settings: StageSettings):
-        self._static_obstacles_num = stage_settings.static_obstacles_num
-        self._dynamic_obstacles_num = stage_settings.dynamic_obstacles_num
-        self._min_obstacle_speed = stage_settings.min_obstacle_speed
-        self._max_obstacle_speed = stage_settings.max_obstacle_speed
-
     def spawn_static_obstacles(self, area_size, keep_out: list = [], keep_out_radius: float = 1.5) -> None:
         keep_out = np.array(keep_out, dtype=float).reshape(-1, 2)
         picked_positions = 0
@@ -172,6 +164,11 @@ class SimulationManager(Node):
         self.goal_position = [0.0, 0.0]
 
         self.arena_size = self.get_parameter("arena_size").value
+        self.seed = self.get_parameter("seed").value if self.has_parameter("seed") else None
+        if self.seed is not None:
+            np.random.seed(self.seed)
+            self.get_logger().info(f"[SimulationManager] random seed: {self.seed}")
+
         stage_names = self.get_parameter("stage_names").value
         self.stage_settings = {}
         for name in stage_names:

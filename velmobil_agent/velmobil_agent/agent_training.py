@@ -33,7 +33,7 @@ def main():
         # policy_kwargs=dict(net_arch=[128,128]),
         gamma=0.99,
         verbose=1,
-        seed=0
+        seed=agent_training_drl_node.get_parameter('seed').value
     )
 
     try:

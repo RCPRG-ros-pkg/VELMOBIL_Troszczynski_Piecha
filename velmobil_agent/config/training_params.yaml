@@ -1,5 +1,6 @@
 agent_training_drl_node:
   ros__parameters:
+    seed: 0
     max_steps_per_episode: 250
     stage_shift_episodes: [5000000, 500000000] # episodes for stage upshift
     quick_reroll_episode_rate: 20 # goal_position + start_position reroll
@@ -8,6 +9,7 @@ agent_training_drl_node:
 
 simulation_manager:
   ros__parameters:
+    seed: 0
     arena_size: 12
     stage_names: ["s1", "s2", "s3"]
     stages:
