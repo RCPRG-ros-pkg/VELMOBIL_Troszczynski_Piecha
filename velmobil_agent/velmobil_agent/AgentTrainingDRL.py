@@ -35,13 +35,6 @@ COLLISION_RANGE = 0.8
 LIDAR_TIMESTAMP_DIFFERENCE = None
 ODOM_TIMESTAMP_DIFFERENCE = None
 
-# 3 attempts to make reset, if robot receive data from 
-# before teleportation and start new episode with incorrect robot position. 
-RESET_MAX_ATTEMPTS = 3
-
-# Distance tolerance between start distance and expected distance
-RESET_DISTANCE_TOLERANCE = 0.3
-
 
 class AgentTrainingDRL(Node, gym.Env):
     def __init__(self):
@@ -243,7 +236,7 @@ class AgentTrainingDRL(Node, gym.Env):
             self.previous_action_vector
         )
 
-        reward_function = RewardFunction('rf_2')
+        reward_function = RewardFunction('rf_3')
         reward, collided, reached_goal = reward_function(training_signals, COLLISION_RANGE, self.goal_tolerance)
 
         terminated = collided or reached_goal

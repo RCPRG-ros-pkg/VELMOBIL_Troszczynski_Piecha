@@ -63,10 +63,16 @@ ros2 launch velmobil_simulation simple_velmobil.launch.py start_pos_x:=-10.0 sta
 ```
 
 ### How to launch simulation manager node with training node
-Training and simulation parameters are set in `training_config/training_params.yaml`. Set `start_pos_x, start_pos_y` parameters in 
+Training and simulation parameters are set in `config/training_params.yaml`. Set `start_pos_x, start_pos_y` parameters in 
 file `SimulationManager.py` in order to get equal values with initial position.
 ```bash
 ros2 launch velmobil_agent training.launch.py
+```
+
+### How to launch inference
+In order to test particular trained policy, go to `velmobil_agent/agent_inference.py` file and change `MODEL_LOAD_PATH` parameter.
+```bash
+ros2 launch velmobil_agent inference.launch.py
 ```
 
 ### How to run time controller node

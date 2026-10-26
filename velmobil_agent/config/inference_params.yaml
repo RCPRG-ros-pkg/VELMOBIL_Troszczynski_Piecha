@@ -1,0 +1,12 @@
+simulation_manager:
+  ros__parameters:
+    arena_size: 12
+    stage_names: ["s1"]
+    stages:
+      s1:
+        static_obstacles_num: 0
+        dynamic_obstacles_num: 0
+        min_obstacle_speed: 1.2
+        max_obstacle_speed: 2.5
+        goal_distance: 5.0
+        goal_tolerance: 0.5

@@ -8,7 +8,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg = get_package_share_directory('velmobil_agent')
-    params_file = os.path.join(pkg, 'training_config', 'training_params.yaml')
+    params_file = os.path.join(pkg, 'config', 'training_params.yaml')
 
     manager = Node(
         package='velmobil_agent',
