@@ -52,6 +52,7 @@ class ObjectController:
         self._goal_object_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'goal_object.sdf'))
 
         self.set_stage_settings(stage_settings)
+        self.static_obstacle_positions = []
         self._spawned_static = []
         self._spawned_dynamic = []
         self._dynamic_publishers = {}
@@ -103,7 +104,13 @@ class ObjectController:
         return response.data
 
     def spawn_static_obstacles(self, area_size: float) -> None:
-        positions = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2)) for _ in range(self._static_obstacles_num)]
+        positions = []
+        while len(positions) < self._static_obstacles_num:
+            position = (np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2))
+            if position in positions:
+                continue
+            positions.append(position)
+        self.static_obstacle_positions = positions
         for i, (x, y) in enumerate(positions):
             name = f'static_obstacle_{i}'
             if self.create_object(name, self._static_rect_obstacle_sdf, (x, y, 1.1)):
@@ -129,6 +136,7 @@ class ObjectController:
         for name in self._spawned_static:
             self.remove_object(name)
         self._spawned_static.clear()
+        self.static_obstacle_positions = []
 
     def remove_dynamic_obstacles(self) -> None:
         for name in self._spawned_dynamic:
@@ -203,12 +211,18 @@ class SimulationManager(Node):
         self._object_controller.spawn_dynamic_obstacles(self.arena_size)
         self._object_controller.spawn_static_obstacles(self.arena_size)
 
+    def is_clear_of_static_obstacles(self, start, goal, clearence: float = 1.5) -> bool:
+        obstacles = np.array(self._object_controller.static_obstacle_positions, dtype = float).reshape(-1, 2)
+        return bool(np.all(np.linalg.norm(obstacles - start, axis = 1) > clearence) and np.all(np.linalg.norm(obstacles - goal, axis = 1) > clearence))
+
     def set_start_goal_position(self, max_attempts: int = 10000) -> bool:
         for _ in range(max_attempts):
             start = np.random.uniform(-(self.arena_size - 1) / 2, (self.arena_size - 1) / 2, size=(2,))
             direction = np.random.uniform(-1.0, 1.0, size=(2,))
             goal = self.stage_settings[self.current_stage_name].goal_distance * (direction / np.linalg.norm(direction)) + start
-            if np.all(np.abs(goal) <= ((self.arena_size - 1) / 2)):
+            if np.all(np.abs(goal) > ((self.arena_size - 1) / 2)):
+                continue
+            if self.is_clear_of_static_obstacles(start, goal):
                 self.start_position, self.goal_position = start, goal
                 return True
         return False
@@ -285,10 +299,10 @@ class SimulationManager(Node):
         else:
             self.start_position = self.inference_start_position.copy()
             self.goal_position = self.inference_goal_position.copy()
-            valid = True
+            valid = self.is_clear_of_static_obstacles(self.start_position, self.goal_position)
         if not valid:
             response.success = False
-            response.message = "Couldn't find start & goal on arena"
+            response.message = "Couldn't find start & goal of static obstacles"
             return response
         self.apply_start_goal()
         self.fill_start_goal_response(response)
