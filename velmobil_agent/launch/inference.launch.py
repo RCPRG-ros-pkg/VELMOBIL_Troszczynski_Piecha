@@ -22,7 +22,7 @@ def generate_launch_description():
     agent = Node(
         package='velmobil_agent',
         executable='agent_inference_drl',
-        parameters=[{'use_sim_time': True}],
+        parameters=[params_file, {'use_sim_time': True}],
         output='screen',
         emulate_tty=True
     )

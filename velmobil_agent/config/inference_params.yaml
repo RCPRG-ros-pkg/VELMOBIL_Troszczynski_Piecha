@@ -1,8 +1,20 @@
+agent_inference_drl_node:
+  ros__parameters:
+    max_navigation_time: 60.0
+    abort_on_collision: false
+    collision_range: 0.8
+    
+
 simulation_manager:
   ros__parameters:
     seed: 42
     arena_size: 12
-    stage_names: ["s1"]
+    stage_names: ["s1", "s2", "s3"]
+    trials_per_stage: 20
+    random_start_goal: true
+    start_position: [0.0, 0.0]
+    goal_position: [5.0, 0.0]
+    reroll_obstacles_each_trial: true
     stages:
       s1:
         static_obstacles_num: 0
@@ -10,4 +22,18 @@ simulation_manager:
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
         goal_distance: 5.0
+        goal_tolerance: 0.5
+      s2:
+        static_obstacles_num: 5
+        dynamic_obstacles_num: 0
+        min_obstacle_speed: 1.2
+        max_obstacle_speed: 2.5
+        goal_distance: 8.0
+        goal_tolerance: 0.5
+      s3:
+        static_obstacles_num: 5
+        dynamic_obstacles_num: 2
+        min_obstacle_speed: 1.2
+        max_obstacle_speed: 2.5
+        goal_distance: 11.0
         goal_tolerance: 0.5

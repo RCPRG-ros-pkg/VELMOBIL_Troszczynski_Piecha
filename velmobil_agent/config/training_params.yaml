@@ -21,16 +21,16 @@ simulation_manager:
         goal_distance: 5.0
         goal_tolerance: 0.5
       s2:
-        static_obstacles_num: 10
+        static_obstacles_num: 5
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
-        goal_distance: 10.0
+        goal_distance: 8.0
         goal_tolerance: 0.5
       s3:
-        static_obstacles_num: 17
-        dynamic_obstacles_num: 0
+        static_obstacles_num: 8
+        dynamic_obstacles_num: 2
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
-        goal_distance: 15.0
+        goal_distance: 11.0
         goal_tolerance: 0.5
