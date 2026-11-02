@@ -15,6 +15,7 @@ from rclpy.clock import Clock, ClockType
 from gz.msgs10.entity_pb2 import Entity
 from gz.msgs10.entity_factory_pb2 import EntityFactory
 from gz.msgs10.twist_pb2 import Twist as GZTwist
+from velmobil_agent.occupancy_grid.OccupancyGrid import Obstacle, OccupancyGrid
 
 
 """
@@ -53,6 +54,7 @@ class ObjectController:
 
         self.set_stage_settings(stage_settings)
         self.static_obstacle_positions = []
+        self.occupancy_grid = OccupancyGrid(0.25, np.array([12.0, 12.0]), np.array([0.0, 0.0]))
         self._spawned_static = []
         self._spawned_dynamic = []
         self._dynamic_publishers = {}
@@ -78,6 +80,8 @@ class ObjectController:
         if not (result and response.data):
             self._logger.warn(f"Failed spawn for {name}")
             return False
+
+        self.occupancy_grid.place_obstacle(Obstacle(name, float(position[0]), float(position[1]), 1.0, 1.0))
         return True
 
     def remove_object(self, name: str) -> bool:
@@ -88,6 +92,7 @@ class ObjectController:
         if not (result and response.data):
             self._logger.warn(f"Failed object removing for {name}")
             return False
+        self.occupancy_grid.remove_obstacle(name)
         return True
 
     def set_entity_pose(self, name: str, position: np.ndarray, z: float = 0.0) -> bool:
@@ -115,6 +120,7 @@ class ObjectController:
             name = f'static_obstacle_{i}'
             if self.create_object(name, self._static_rect_obstacle_sdf, (x, y, 1.1)):
                 self._spawned_static.append(name)
+        self.occupancy_grid.inflate(3)
 
     def spawn_dynamic_obstacles(self, area_size: float) -> None:
         positions_orientations = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2),np.random.uniform(-np.pi, np.pi)) for _ in range(self._dynamic_obstacles_num)]
@@ -137,6 +143,7 @@ class ObjectController:
             self.remove_object(name)
         self._spawned_static.clear()
         self.static_obstacle_positions = []
+        self.occupancy_grid.clear()
 
     def remove_dynamic_obstacles(self) -> None:
         for name in self._spawned_dynamic:
@@ -212,8 +219,11 @@ class SimulationManager(Node):
         self._object_controller.spawn_static_obstacles(self.arena_size)
 
     def is_clear_of_static_obstacles(self, start, goal, clearence: float = 1.5) -> bool:
-        obstacles = np.array(self._object_controller.static_obstacle_positions, dtype = float).reshape(-1, 2)
-        return bool(np.all(np.linalg.norm(obstacles - start, axis = 1) > clearence) and np.all(np.linalg.norm(obstacles - goal, axis = 1) > clearence))
+        start_clear = self._object_controller.occupancy_grid.is_free(start[0], start[1])
+        goal_clear = self._object_controller.occupancy_grid.is_free(goal[0], goal[1])
+        # obstacles = np.array(self._object_controller.static_obstacle_positions, dtype = float).reshape(-1, 2)
+        # return bool(np.all(np.linalg.norm(obstacles - start, axis = 1) > clearence) and np.all(np.linalg.norm(obstacles - goal, axis = 1) > clearence))
+        return start_clear and goal_clear
 
     def set_start_goal_position(self, max_attempts: int = 10000) -> bool:
         for _ in range(max_attempts):

@@ -1,7 +1,7 @@
 agent_inference_drl_node:
   ros__parameters:
     max_navigation_time: 60.0
-    abort_on_collision: false
+    abort_on_collision: True
     collision_range: 0.8
     
 
@@ -9,7 +9,8 @@ simulation_manager:
   ros__parameters:
     seed: 42
     arena_size: 12
-    stage_names: ["s1", "s2", "s3"]
+    # stage_names: ["s1", "s2", "s3"]
+    stage_names: ["s1"]
     trials_per_stage: 20
     random_start_goal: true
     start_position: [0.0, 0.0]
