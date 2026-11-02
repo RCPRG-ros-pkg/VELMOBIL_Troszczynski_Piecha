@@ -6,8 +6,8 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
-from .RobotStateData import RobotStateDataManager, RobotActionDataManager
-from .Model import Model
+from velmobil_agent.common.RobotStateData import RobotStateDataManager, RobotActionDataManager
+from velmobil_agent.common.Model import Model
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from sensor_msgs.msg import LaserScan
@@ -15,7 +15,7 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from velmobil_interfaces.srv import InferenceScenario
 import time
-from velmobil_agent.utilities.logs_creators import save_trial_outputs, evaluation_summary, record_outcome_elapsed_time
+from velmobil_agent.common.logs_creators import save_trial_outputs, evaluation_summary, record_outcome_elapsed_time
 
 
 """

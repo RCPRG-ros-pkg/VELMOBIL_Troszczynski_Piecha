@@ -7,7 +7,7 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
-from velmobil_agent.utilities.preprocessing import MinPooling, IPAPRecN
+from velmobil_agent.common.preprocessing import MinPooling, IPAPRecN
 
 
 """

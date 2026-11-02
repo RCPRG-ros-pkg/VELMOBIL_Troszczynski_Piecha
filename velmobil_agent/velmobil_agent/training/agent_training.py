@@ -4,7 +4,7 @@ import numpy as np
 import threading
 from rclpy.executors import MultiThreadedExecutor
 from .AgentTrainingDRL import AgentTrainingDRL
-from .Model import Model
+from velmobil_agent.common.Model import Model
 import matplotlib.pyplot as plt
 
 TOTAL_TIMESTEPS = 300_000

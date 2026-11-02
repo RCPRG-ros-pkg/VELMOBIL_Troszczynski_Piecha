@@ -4,8 +4,8 @@ import rclpy
 import threading
 from datetime import datetime
 from rclpy.executors import MultiThreadedExecutor
-from .AgentInferenceDRL import AgentInferenceDRL
-from .Model import Model
+from velmobil_agent.inference.AgentInferenceDRL import AgentInferenceDRL
+from velmobil_agent.common.Model import Model
 
 
 MODEL_LOAD_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_5_trained_policy.zip"

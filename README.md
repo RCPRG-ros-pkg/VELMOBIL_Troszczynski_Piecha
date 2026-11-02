@@ -70,14 +70,9 @@ ros2 launch velmobil_agent training.launch.py
 ```
 
 ### How to launch inference
-In order to test particular trained policy, go to `velmobil_agent/agent_inference.py` file and change `MODEL_LOAD_PATH` parameter.
+In order to test particular trained policy, go to `velmobil_agent/inference/agent_inference.py` file and change `MODEL_LOAD_PATH` parameter.
 ```bash
 ros2 launch velmobil_agent inference.launch.py
-```
-
-### How to run time controller node
-```bash
-ros2 run velmobil_agent time_control --ros-args -p rtf:=1.0 -p steps:=1 -p pause:=False
 ```
 
 ### How to control velmobil

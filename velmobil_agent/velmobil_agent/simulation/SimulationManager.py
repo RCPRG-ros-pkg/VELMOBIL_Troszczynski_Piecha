@@ -220,7 +220,7 @@ class SimulationManager(Node):
             start = np.random.uniform(-(self.arena_size - 1) / 2, (self.arena_size - 1) / 2, size=(2,))
             direction = np.random.uniform(-1.0, 1.0, size=(2,))
             goal = self.stage_settings[self.current_stage_name].goal_distance * (direction / np.linalg.norm(direction)) + start
-            if np.all(np.abs(goal) > ((self.arena_size - 1) / 2)):
+            if np.any(np.abs(goal) > ((self.arena_size - 1) / 2)):
                 continue
             if self.is_clear_of_static_obstacles(start, goal):
                 self.start_position, self.goal_position = start, goal

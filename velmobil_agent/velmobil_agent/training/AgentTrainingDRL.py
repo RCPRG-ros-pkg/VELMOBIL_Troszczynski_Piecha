@@ -4,7 +4,7 @@ import rclpy
 import threading
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from .RobotStateData import RobotStateDataManager, RobotActionDataManager
+from velmobil_agent.common.RobotStateData import RobotStateDataManager, RobotActionDataManager
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
@@ -14,7 +14,7 @@ from ros_gz_interfaces.srv import ControlWorld
 from velmobil_interfaces.srv import StageModification
 from std_srvs.srv import Trigger
 
-from velmobil_agent.utilities.reward_function import TrainingSignals, RewardFunction
+from velmobil_agent.training.reward_function import TrainingSignals, RewardFunction
 
 """
 Agent Training DRL

@@ -25,7 +25,7 @@ class RewardFunction(ABC):
         for subclass in cls.__subclasses__():
             if subclass.__name__ == rf_name:
                 return subclass()
-        raise ValueError(f"Uknown reward function name: {rf_name}")
+        raise ValueError(f"Unknown reward function name: {rf_name}")
 
 
 class RewardFunction1(RewardFunction):
