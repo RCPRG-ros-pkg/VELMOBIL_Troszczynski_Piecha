@@ -32,8 +32,7 @@ setup(
         'console_scripts': [
             'agent_training_drl = velmobil_agent.agent_training:main',
             'agent_inference_drl = velmobil_agent.agent_inference:main',
-            'manage_simulation = velmobil_agent.SimulationManager:main',
-            'time_control = velmobil_agent.TimeController:main',
+            'manage_simulation = velmobil_agent.SimulationManager:main'
         ],
     },
 )
