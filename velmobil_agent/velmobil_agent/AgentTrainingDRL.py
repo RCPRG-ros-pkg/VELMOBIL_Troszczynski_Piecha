@@ -56,7 +56,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.stepped_event = threading.Event()
         self.reset_simulation_event = threading.Event()
 
-
+        self.reward_function = RewardFunction.choose_rf(self.get_parameter("reward_function_class_name").value)
         self.max_steps_per_episode = self.get_parameter('max_steps_per_episode').value
         self.stage_shift_episodes : list[int] = self.get_parameter('stage_shift_episodes').value
         self.quick_reroll_episode_rate = self.get_parameter('quick_reroll_episode_rate').value
@@ -236,8 +236,7 @@ class AgentTrainingDRL(Node, gym.Env):
             self.previous_action_vector
         )
 
-        reward_function = RewardFunction('rf_3')
-        reward, collided, reached_goal = reward_function(training_signals, COLLISION_RANGE, self.goal_tolerance)
+        reward, collided, reached_goal = self.reward_function(training_signals, COLLISION_RANGE, self.goal_tolerance)
 
         terminated = collided or reached_goal
         truncated = self.steps_this_episode >= self.max_steps_per_episode

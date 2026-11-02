@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from abc import ABC, abstractmethod
 import numpy as np
 
 
@@ -14,15 +15,21 @@ class TrainingSignals:
     previous_action_vector: np.ndarray
 
 
-class RewardFunction:
-    def __init__(self, reward_function_name: str):
-        self.reward_func = {
-            "rf_1": self.reward_func_1,
-            "rf_2": self.reward_func_2,
-            "rf_3": self.reward_func_3
-        }[reward_function_name]
+class RewardFunction(ABC):
+    @abstractmethod
+    def __call__(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) ->  tuple[float, bool, bool]:
+        pass
 
-    def reward_func_1(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
+    @classmethod
+    def choose_rf(cls, rf_name: str) -> "RewardFunction":
+        for subclass in cls.__subclasses__():
+            if subclass.__name__ == rf_name:
+                return subclass()
+        raise ValueError(f"Uknown reward function name: {rf_name}")
+
+
+class RewardFunction1(RewardFunction):
+    def __call__(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
         reach_goal_weight = 10.0
         crash_weight = -10.0
         step_weight = 0.002
@@ -40,7 +47,9 @@ class RewardFunction:
             reward = -step_weight + progress_reward
         return float(reward), collided, reached_goal
 
-    def reward_func_2(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
+
+class RewardFunction2(RewardFunction):
+    def __call__(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
         reach_goal_weight = 10.0
         crash_weight = -10.0
         step_weight = 0.002
@@ -60,7 +69,9 @@ class RewardFunction:
             reward = -step_weight + progress_reward + bearing_reward
         return float(reward), collided, reached_goal
 
-    def reward_func_3(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
+
+class RewardFunction3(RewardFunction):
+    def __call__(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
         reach_goal_weight = 10.0
         crash_weight = -10.0
         step_weight = 0.002
@@ -83,6 +94,3 @@ class RewardFunction:
             action_smoothness_reward = -action_smoothness_weight * np.sum((signals.current_action_vector - signals.previous_action_vector) ** 2)
             reward = -step_weight + progress_reward + bearing_reward + angular_velocity_reward + action_smoothness_reward
         return float(reward), collided, reached_goal
-
-    def __call__(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) ->  tuple[float, bool, bool]:
-        return self.reward_func(signals, collision_range, goal_tolerance)
