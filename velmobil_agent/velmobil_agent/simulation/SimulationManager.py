@@ -13,6 +13,8 @@ from gz.msgs10.pose_pb2 import Pose
 from gz.msgs10.boolean_pb2 import Boolean
 from rclpy.clock import Clock, ClockType
 from gz.msgs10.entity_pb2 import Entity
+from gz.msgs10.empty_pb2 import Empty
+from gz.msgs10.scene_pb2 import Scene
 from gz.msgs10.entity_factory_pb2 import EntityFactory
 from gz.msgs10.twist_pb2 import Twist as GZTwist
 
@@ -45,13 +47,14 @@ class ObjectController:
         self._world_name = 'velmobil_arena'
         self._logger = logger
         self._gz_node = GZNode()
+        self._spawn_generation = 0
+        self._stage_settings = stage_settings
 
         self._static_rect_obstacle_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'static_obstacle_rect.sdf'))
         self._dynamic_rect_obstacle_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'dynamic_obstacles', 'dynamic_obstacle_rect.sdf'))
         self._start_object_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'start_object.sdf'))
         self._goal_object_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'goal_object.sdf'))
 
-        self.set_stage_settings(stage_settings)
         self.static_obstacle_positions = []
         self._spawned_static = []
         self._spawned_dynamic = []
@@ -59,10 +62,7 @@ class ObjectController:
         self._dynamic_velocities = {}
 
     def set_stage_settings(self, stage_settings: StageSettings):
-        self._static_obstacles_num = stage_settings.static_obstacles_num
-        self._dynamic_obstacles_num = stage_settings.dynamic_obstacles_num
-        self._min_obstacle_speed = stage_settings.min_obstacle_speed
-        self._max_obstacle_speed = stage_settings.max_obstacle_speed
+        self._stage_settings = stage_settings
 
     def create_object(self, name: str, sdf: str, position, yaw: float = 0.0) -> bool:
         req = EntityFactory()
@@ -102,66 +102,68 @@ class ObjectController:
             self._logger.warn(f"Set_pose request failed/timed out for {name}")
             return False
         return response.data
+    
+    def remove_leftover_obstacles(self) -> None:
+        result, scene = self._gz_node.request(f'/world/{self._world_name}/scene/info', Empty(), Empty, Scene, 5000)
+        if not result:
+            self._logger.warn("Couldn't read scene info - leftover obstacles not removed")
+            return
+        for model in scene.model:
+            if model.name.startswith(('static_obstacle_', 'dynamic_obstacle_')):
+                self.remove_object(model.name)
 
     def spawn_static_obstacles(self, area_size: float) -> None:
+        self._spawn_generation += 1
         positions = []
-        while len(positions) < self._static_obstacles_num:
+        while len(positions) < self._stage_settings.static_obstacles_num:
             position = (np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2))
             if position in positions:
                 continue
             positions.append(position)
         self.static_obstacle_positions = positions
         for i, (x, y) in enumerate(positions):
-            name = f'static_obstacle_{i}'
+            name = f'static_obstacle_{self._spawn_generation}_{i}'
             if self.create_object(name, self._static_rect_obstacle_sdf, (x, y, 1.1)):
                 self._spawned_static.append(name)
 
     def spawn_dynamic_obstacles(self, area_size: float) -> None:
-        positions_orientations = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2),np.random.uniform(-np.pi, np.pi)) for _ in range(self._dynamic_obstacles_num)]
-        speeds = np.random.uniform(self._min_obstacle_speed, self._max_obstacle_speed, size=len(positions_orientations))
+        self._spawn_generation += 1
+        positions_orientations = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2),np.random.uniform(-np.pi, np.pi)) for _ in range(self._stage_settings.dynamic_obstacles_num)]
+        speeds = np.random.uniform(self._stage_settings.min_obstacle_speed, self._stage_settings.max_obstacle_speed, size=len(positions_orientations))
         for i, ((x, y, yaw), speed) in enumerate(zip(positions_orientations, speeds)):
-            name = f'dynamic_obstacle_{i}'
-            topic = f'/model/{name}/cmd_vel'
+            name = f'dynamic_obstacle_{self._spawn_generation}_{i}'
+            topic = f'/model/dynamic_obstacle_{i}/cmd_vel'
             sdf = self._dynamic_rect_obstacle_sdf.replace('/model/dynamic_obstacle_rectangle/cmd_vel', topic)
             if not self.create_object(name, sdf, (x, y, 1.1), yaw):
                 continue
             self._spawned_dynamic.append(name)
-            if name not in self._dynamic_publishers:
-                self._dynamic_publishers[name] = self._gz_node.advertise(topic, GZTwist)
+            if topic not in self._dynamic_publishers:
+                self._dynamic_publishers[topic] = self._gz_node.advertise(topic, GZTwist)
             msg = GZTwist()
             msg.linear.x = float(speed)
-            self._dynamic_velocities[name] = msg
+            self._dynamic_velocities[topic] = msg
 
-    def remove_static_obstacles(self) -> None:
-        for name in self._spawned_static:
+    def remove_obstacles(self) -> None:
+        for name in (self._spawned_static + self._spawned_dynamic):
             self.remove_object(name)
         self._spawned_static.clear()
-        self.static_obstacle_positions = []
-
-    def remove_dynamic_obstacles(self) -> None:
-        for name in self._spawned_dynamic:
-            self.remove_object(name)
-            self._dynamic_velocities.pop(name, None)
         self._spawned_dynamic.clear()
+        self.static_obstacle_positions = []
+        self._dynamic_velocities.clear()
 
     def set_velocity_for_dynamic_obstacles(self) -> None:
-        for name, msg in self._dynamic_velocities.items():
-            self._dynamic_publishers[name].publish(msg)
+        for topic, msg in self._dynamic_velocities.items():
+            self._dynamic_publishers[topic].publish(msg)
 
-    def spawn_start_object(self, start_coordinates: np.ndarray) -> None:
+    def spawn_markers(self, start_coordinates: np.ndarray, goal_coordinates: np.ndarray) -> None:
         self.create_object('start_object', self._start_object_sdf, (start_coordinates[0], start_coordinates[1], 0.0))
-
-    def spawn_goal_object(self, goal_coordinates: np.ndarray) -> None:
         self.create_object('goal_object', self._goal_object_sdf, (goal_coordinates[0], goal_coordinates[1], 0.0))
-    
-    def move_start_object(self, start: np.ndarray) -> bool:
-        return self.set_entity_pose('start_object', start)
 
-    def move_goal_object(self, goal: np.ndarray) -> bool:
-        return self.set_entity_pose('goal_object', goal)
-
-    def teleport_robot(self, position: np.ndarray) -> bool:
-        return self.set_entity_pose('velmobil', position, z=0.1)
+    def place_markers_and_robot(self, start_coordinates: np.ndarray, goal_coordinates: np.ndarray) -> bool:
+        robot_moved = self.set_entity_pose('velmobil', start_coordinates, z = 0.1)
+        start_moved = self.set_entity_pose('start_object', start_coordinates)
+        goal_moved = self.set_entity_pose('goal_object', goal_coordinates)
+        return robot_moved and start_moved and goal_moved
 
     
 class SimulationManager(Node):
@@ -190,8 +192,8 @@ class SimulationManager(Node):
         self.goal_position = np.array([0.0, 0.0])
 
         self._object_controller = ObjectController(self.stage_settings[self.current_stage_name], self.get_logger())
-        self._object_controller.spawn_start_object(self.start_position)
-        self._object_controller.spawn_goal_object(self.goal_position)
+        self._object_controller.remove_leftover_obstacles()
+        self._object_controller.spawn_markers(self.start_position, self.goal_position)
         self.get_logger().info(f"[SimulationManager] Initialized Object Controller for {self.current_stage_name}")
 
         self._dynamic_obstacles_timer = self.create_timer(0.5, self._object_controller.set_velocity_for_dynamic_obstacles, clock = Clock(clock_type = ClockType.STEADY_TIME))
@@ -204,8 +206,7 @@ class SimulationManager(Node):
         return self.get_parameter(name).value if self.has_parameter(name) else default_parameter
 
     def change_stage(self, stage_name: str) -> None:
-        self._object_controller.remove_static_obstacles()
-        self._object_controller.remove_dynamic_obstacles()
+        self._object_controller.remove_obstacles()
         self.current_stage_name = stage_name
         self._object_controller.set_stage_settings(self.stage_settings[self.current_stage_name])
         self._object_controller.spawn_dynamic_obstacles(self.arena_size)
@@ -228,12 +229,8 @@ class SimulationManager(Node):
         return False
 
     def apply_start_goal(self) -> None:
-        if not self._object_controller.teleport_robot(self.start_position):
-            self.get_logger().warn("Robot not moved")
-        if not self._object_controller.move_goal_object(self.goal_position):
-            self.get_logger().warn("Goal object not moved")
-        if not self._object_controller.move_start_object(self.start_position):
-            self.get_logger().warn("Start object not moved")
+        if not self._object_controller.place_markers_and_robot(self.start_position, self.goal_position):
+            self.get_logger().warn("Robot or start / goal markers not moved")
 
     def fill_start_goal_response(self, response) -> None:
         response.initial_pos_x = float(self.start_position[0])
@@ -241,6 +238,21 @@ class SimulationManager(Node):
         response.goal_pos_x = float(self.goal_position[0])
         response.goal_pos_y = float(self.goal_position[1])
         response.goal_tolerance = self.stage_settings[self.current_stage_name].goal_tolerance
+
+    def advance_inference_trial(self) -> bool:
+        if self._inference_trial >= self.trials_per_stage:
+            self._inference_trial = 0
+            self._inference_stage_index += 1
+        if self._inference_stage_index >= len(self.stage_names):
+            return False
+        if self._inference_trial == 0:
+            if self.seed is not None:
+                np.random.seed(self.seed + self._inference_stage_index)
+            self.change_stage(self.stage_names[self._inference_stage_index])
+        elif self.reroll_obstacles_each_trial:
+            self.change_stage(self.stage_names[self._inference_stage_index])
+        self._inference_trial += 1
+        return True
 
     def handle_quick_reset_request(self, request, response):
         self.get_logger().info("handle quick reset simulation")
@@ -274,21 +286,11 @@ class SimulationManager(Node):
 
     def handle_inference_scenario_request(self, request, response):
         self.get_logger().info("handle inference scenario")
-        if self._inference_trial >= self.trials_per_stage:
-            self._inference_trial = 0
-            self._inference_stage_index += 1
-        if self._inference_stage_index >= len(self.stage_names):
+        if not self.advance_inference_trial():
             response.done_evaluation = True
             response.success = True
             response.message = "\n| Inference evaluation finished\n"
             return response
-        if self._inference_trial == 0:
-            if self.seed is not None:
-                np.random.seed(self.seed + self._inference_stage_index)
-            self.change_stage(self.stage_names[self._inference_stage_index])
-        elif self.reroll_obstacles_each_trial:
-            self.change_stage(self.stage_names[self._inference_stage_index])
-        self._inference_trial += 1
         response.stage = self.current_stage_name
         response.trial = self._inference_trial
         response.goal_distance = self.stage_settings[self.current_stage_name].goal_distance

@@ -16,6 +16,7 @@ from action_msgs.msg import GoalStatus
 from velmobil_interfaces.srv import InferenceScenario
 import time
 from velmobil_agent.common.logs_creators import save_trial_outputs, evaluation_summary, record_outcome_elapsed_time
+from ros_gz_interfaces.srv import ControlWorld
 
 
 """
@@ -27,6 +28,10 @@ Agent Inference DRL
 + Evaluation iterates over setted stages
 + Settings are read from inference_params.yaml
 """
+
+#   Approach with multi step like in training mode
+WORLD_CONTROL_MULTI_STEP = 11
+SIMULATION_STEP_TIME = 0.01 # should be same as max_step_size in velmobil_arena.sdf file
 
 LIDAR_TIMESTAMP_DIFFERENCE = None
 ODOM_TIMESTAMP_DIFFERENCE = None
@@ -49,7 +54,8 @@ class AgentInferenceDRL(Node):
         self.done_evaluation = threading.Event()
         self.trial_done_event = threading.Event()
 
-        self.action_done = threading.Event()
+        self.new_data_event = threading.Event()
+        self.stepped_event = threading.Event()
         self.inference_scenario_event = threading.Event()
 
         self.initialize_action_utils()
@@ -78,6 +84,7 @@ class AgentInferenceDRL(Node):
 
     def initialize_simulation_utils(self):
         self.simulation_callback_group = ReentrantCallbackGroup()
+        self.simulation_step_client = self.create_client(ControlWorld, '/world/velmobil_arena/control', callback_group=self.simulation_callback_group)
         self.inference_scenario_client = self.create_client(InferenceScenario, '/inference_scenario', callback_group=self.simulation_callback_group)
 
     def initialize_nav_action_server(self):
@@ -98,7 +105,6 @@ class AgentInferenceDRL(Node):
         self.trial = 0
         self.stage_parameters = {}
         self.evaluation_results = []
-        self.trial_status = None
         self.trial_outcome = "unknown"
         self.trial_time = 0.0
         self.inference_scenario_success = False
@@ -106,8 +112,14 @@ class AgentInferenceDRL(Node):
 
     def run_evaluation(self):
         time.sleep(2.0)
-        if not self._action_client.wait_for_server(timeout_sec=10.0) or not self.inference_scenario_client.wait_for_service(timeout_sec=10.0):
-            self.get_logger().error("Action server /navigate_to_pose_drl or service /inference_scenario not available")
+        if not self._action_client.wait_for_server(timeout_sec=10.0) or not self.inference_scenario_client.wait_for_service(timeout_sec=10.0) or not self.simulation_step_client.wait_for_service(timeout_sec=10.0):
+            self.get_logger().error("Action server or simulation services not available")
+            self.done_evaluation.set()
+            return
+        self.stepped_event.clear()
+        self.step_simulation()
+        if not self.stepped_event.wait(timeout=6.0):
+            self.get_logger().error("Couldn't pause simulation")
             self.done_evaluation.set()
             return
         while rclpy.ok():
@@ -128,7 +140,6 @@ class AgentInferenceDRL(Node):
 
     def reset_trial(self):
         self.trial_done_event.clear()
-        self.trial_status = None
         self.trial_outcome = "unknown"
         self.trial_time = 0.0
 
@@ -140,7 +151,7 @@ class AgentInferenceDRL(Node):
         goal.pose.pose.orientation.w = 1.0
         future = self._action_client.send_goal_async(goal, feedback_callback = self.goal_feedback_callback)
         future.add_done_callback(self.goal_response_callback)
-        if not self.trial_done_event.wait(timeout=self.max_navigation_time + 240.0):
+        if not self.trial_done_event.wait(timeout=self.max_navigation_time + 240.0): # increase buffor if needed
             self.get_logger().error("[AgentInferenceDRL] Timeout waiting for trial result")
             self.trial_outcome = "no_result"
 
@@ -159,9 +170,9 @@ class AgentInferenceDRL(Node):
         goal_handle.get_result_async().add_done_callback(self.goal_result_callback)
 
     def goal_result_callback(self, future):
-        self.trial_status = future.result().status
+        trial_status = future.result().status
         status_names = {GoalStatus.STATUS_SUCCEEDED: "SUCCEEDED", GoalStatus.STATUS_ABORTED: "ABORTED", GoalStatus.STATUS_CANCELED: "CANCELED"}
-        self.get_logger().info(f"Goal finished: {status_names.get(self.trial_status, self.trial_status)}")
+        self.get_logger().info(f"Goal finished: {status_names.get(trial_status, trial_status)}")
         self.trial_done_event.set()
 
     def goal_callback(self, goal_request):
@@ -206,16 +217,17 @@ class AgentInferenceDRL(Node):
 
     def execute_callback(self, goal_handle):
         self.active_goal_handle = goal_handle
-        goal_pose = goal_handle.request.pose
-        self.current_goal_pose = goal_pose.pose
+        self.current_goal_pose = goal_handle.request.pose.pose
         self.goal_position = np.array([self.current_goal_pose.position.x, self.current_goal_pose.position.y])
         self.stop_robot()
-        time.sleep(0.5)
         self.robot_state_data_manager.zero_last_acquired_timestamp_all()
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)
         self.robot_state_data_manager.open_for_data()
-        start_time = time.time()
         feedback_msg = NavigateToPose.Feedback()
+        step_time = WORLD_CONTROL_MULTI_STEP * SIMULATION_STEP_TIME
+        steps = 0
+        if not self.step_and_wait():
+            return self.abort_on_step_timeout(goal_handle)
         while rclpy.ok():
             if self.active_goal_handle is not goal_handle:
                 goal_handle.abort()
@@ -227,16 +239,13 @@ class AgentInferenceDRL(Node):
                 self.stop_robot()
                 self.get_logger().info("Goal Canceled")
                 return NavigateToPose.Result()
-            elapsed = time.time() - start_time
+            elapsed = steps * step_time
             if self.max_navigation_time > 0.0 and elapsed > self.max_navigation_time:
                 record_outcome_elapsed_time(self, "timeout", elapsed)
                 goal_handle.abort()
                 self.stop_robot()
                 self.get_logger().warn(f"Goal Aborted - navigation time exceeded {self.max_navigation_time:.1f}s")
                 return NavigateToPose.Result()
-            if not self.next_step(timeout = 3.0):
-                self.get_logger().warn("Timeout waiting for state data", throttle_duration_sec=2.0)
-                continue
             if self.latest_full_state["odom"]["current_distance"] < self.goal_tolerance:
                 record_outcome_elapsed_time(self, "reached", elapsed)
                 goal_handle.succeed()
@@ -254,6 +263,12 @@ class AgentInferenceDRL(Node):
             feedback_msg.navigation_time.sec = int(elapsed)
             feedback_msg.navigation_time.nanosec = int((elapsed % 1.0)*1e9)
             goal_handle.publish_feedback(feedback_msg)
+
+            self.latest_action = self.model.predict(self.latest_state, deterministic = True)
+            self.robot_action_data_manager.send_action_data(self.latest_action)
+            if not self.step_and_wait():
+                return self.abort_on_step_timeout(goal_handle)
+            steps += 1
         goal_handle.abort()
         self.stop_robot()
         return NavigateToPose.Result()
@@ -275,11 +290,32 @@ class AgentInferenceDRL(Node):
     def predict_action(self, data):
         self.latest_full_state = data
         self.latest_state = np.concatenate([data["lidar"]["processed_ranges"], data["odom"]["normalized_distance"]]).astype(np.float32)
-        self.latest_action = self.model.predict(self.latest_state, deterministic = True)
-        self.robot_action_data_manager.send_action_data(self.latest_action)
-        self.action_done.set()
+        self.new_data_event.set()
 
-    def next_step(self, timeout=None):
-        self.action_done.clear()
+    def step_simulation(self):
+        req = ControlWorld.Request()
+        req.world_control.pause = True
+        req.world_control.multi_step = WORLD_CONTROL_MULTI_STEP
+        future = self.simulation_step_client.call_async(req)
+        future.add_done_callback(self.step_simulation_callback)
+
+    def step_simulation_callback(self, future):
+        result = future.result()
+        if result is not None and result.success:
+            self.stepped_event.set()
+        else:
+            self.get_logger().error("Failed to step simulation!")
+
+    def step_and_wait(self) -> bool:
+        self.new_data_event.clear()
+        self.stepped_event.clear()
         self.robot_state_data_manager.release_all()
-        return self.action_done.wait(timeout = timeout)
+        self.step_simulation()
+        return self.stepped_event.wait(timeout = 6.0) and self.new_data_event.wait(timeout = 6.0)
+
+    def abort_on_step_timeout(self, goal_handle):
+        self.trial_outcome = "step_timeout"
+        goal_handle.abort()
+        self.stop_robot()
+        self.get_logger().error("Goal Aborted - timeout waiting for simulation step or state data")
+        return NavigateToPose.Result()

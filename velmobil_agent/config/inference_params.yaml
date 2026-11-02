@@ -1,7 +1,7 @@
 agent_inference_drl_node:
   ros__parameters:
     max_navigation_time: 60.0
-    abort_on_collision: false
+    abort_on_collision: true
     collision_range: 0.8
     
 
