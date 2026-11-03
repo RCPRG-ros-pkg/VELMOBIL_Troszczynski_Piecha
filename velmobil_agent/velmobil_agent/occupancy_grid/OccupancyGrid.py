@@ -27,13 +27,21 @@ class OccupancyGrid:
     def cast_world_to_grid(self, x_world, y_world):
         return (math.floor(x_world / self.voxel_size - self.grid_origin[0]), math.floor(y_world / self.voxel_size - self.grid_origin[1]))
     def cast_grid_to_world(self, x_grid, y_grid):
-        return ((x_grid + self.grid_origin[0]) * self.voxel_size, (y_grid + self.grid_origin[1]) * self.voxel_size)
+        return ((x_grid + self.grid_origin[0]) * self.voxel_size + int(self.voxel_size/2), (y_grid + self.grid_origin[1]) * self.voxel_size + int(self.voxel_size/2))
     
     def index_grid(self, x : int, y : int) -> tuple[int]:
-        """Access self.grid with (x,y) ROS2 convension"""
+        """Pass standard index, receive numpy index"""
         grid_center_x = int ((self.map_shape[0] - self.map_origin[0]) // self.voxel_size)
         grid_center_y = int ((self.map_shape[1] - self.map_origin[1]) // self.voxel_size)
         return (grid_center_x - x, grid_center_y - y)
+
+    def reverse_index_grid(self, x : int, y : int) -> tuple[int]:
+        """Pass numpy index, receive standard index"""
+        grid_center_x = int ((self.map_shape[0] - self.map_origin[0]) // self.voxel_size)
+        grid_center_y = int ((self.map_shape[1] - self.map_origin[1]) // self.voxel_size)
+        return (grid_center_x -x, grid_center_y - y) ## no mistake - its the same
+
+
 
     def place_obstacle(self, obstacle : Obstacle):
         self.obstacles.append(obstacle)

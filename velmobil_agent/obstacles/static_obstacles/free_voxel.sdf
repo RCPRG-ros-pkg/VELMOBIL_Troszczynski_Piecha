@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+    <model name="free_voxel">
+        <static>true</static>
+        <link name="link">
+            <!-- Podniesione o połowę grubości, żeby leżało na podłodze (z=0) -->
+            <pose>0 0 0.0025 0 0 0</pose>
+            <visual name="visual">
+                <geometry>
+                    <box>
+                        <size>0.15 0.15 0.005</size>
+                    </box>
+                </geometry>
+                <material>
+                    <diffuse>0.224 1 0.663 1</diffuse>
+                    <ambient>0.224 1 0.663 1</ambient>
+                </material>
+            </visual>
+        </link>
+    </model>
+</sdf>

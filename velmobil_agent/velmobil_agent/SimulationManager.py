@@ -16,6 +16,8 @@ from gz.msgs10.entity_pb2 import Entity
 from gz.msgs10.entity_factory_pb2 import EntityFactory
 from gz.msgs10.twist_pb2 import Twist as GZTwist
 from velmobil_agent.occupancy_grid.OccupancyGrid import Obstacle, OccupancyGrid
+from nav_msgs.msg import OccupancyGrid as OccupancyGridMsg
+from rclpy.qos import QoSProfile, DurabilityPolicy
 
 
 """
@@ -51,7 +53,9 @@ class ObjectController:
         self._dynamic_rect_obstacle_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'dynamic_obstacles', 'dynamic_obstacle_rect.sdf'))
         self._start_object_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'start_object.sdf'))
         self._goal_object_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'goal_object.sdf'))
-
+        self._free_voxel_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'free_voxel.sdf'))
+        self._occupied_voxel_sdf = sdf_reader(os.path.join(get_package_share_directory('velmobil_agent'), 'obstacles', 'static_obstacles', 'occupied_voxel.sdf'))
+        
         self.set_stage_settings(stage_settings)
         self.static_obstacle_positions = []
         self.occupancy_grid = OccupancyGrid(0.25, np.array([12.0, 12.0]), np.array([0.0, 0.0]))
@@ -170,6 +174,16 @@ class ObjectController:
     def teleport_robot(self, position: np.ndarray) -> bool:
         return self.set_entity_pose('velmobil', position, z=0.1)
 
+    def visualize_occupancy_grid(self) -> None:
+        for x in range(self.occupancy_grid.grid.shape[0]):
+            for y in range(self.occupancy_grid.grid.shape[1]):
+                reality_coordinates = self.occupancy_grid.cast_grid_to_world(*self.occupancy_grid.reverse_index_grid(x, y))
+                if self.occupancy_grid.inflated_grid[x, y] == 0:
+                    if self.create_object(f'free_voxel_{x}_{y}', self._free_voxel_sdf, (reality_coordinates[0], reality_coordinates[1], 0.0)):
+                        self._spawned_static.append(f'free_voxel_{x}_{y}')
+                else:
+                    if self.create_object(f'occupied_voxel_{x}_{y}', self._occupied_voxel_sdf, (reality_coordinates[0], reality_coordinates[1], 0.0)):
+                        self._spawned_static.append(f'occupied_voxel_{x}_{y}')
     
 class SimulationManager(Node):
     def __init__(self):
@@ -206,6 +220,23 @@ class SimulationManager(Node):
         self._quick_reset_service = self.create_service(Trigger, '/quick_reset_simulation', self.handle_quick_reset_request)
         self._hard_reset_service = self.create_service(StageModification, '/hard_reset_simulation', self.handle_hard_reset_request)
         self._inference_scenario_service = self.create_service(InferenceScenario, '/inference_scenario', self.handle_inference_scenario_request)
+        self._occupancy_grid_publisher = self.create_publisher(OccupancyGridMsg, '/occupancy_grid', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+
+    def publish_occupancy_grid(self) -> None:
+        grid = self._object_controller.occupancy_grid
+        data = grid.inflated_grid[::-1, ::-1].T # flipped format for ROS2 occupancy grid msg
+        x_min, y_min = grid.reverse_index_grid(grid.inflated_grid.shape[0] - 1, grid.inflated_grid.shape[1] - 1)
+        msg = OccupancyGridMsg()
+        msg.header.frame_id = '/odom'
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.info.resolution = float(grid.voxel_size)
+        msg.info.width = data.shape[1]
+        msg.info.height = data.shape[0]
+        msg.info.origin.position.x = float((x_min + grid.grid_origin[0]) * grid.voxel_size)
+        msg.info.origin.position.y = float((y_min + grid.grid_origin[1]) * grid.voxel_size)
+        msg.info.origin.orientation.w = 1.0
+        msg.data = np.where(data != 0, 100, 0).astype(np.int8).flatten().tolist()
+        self._occupancy_grid_publisher.publish(msg)
 
     def parameter(self, name: str, default_parameter = None):
         return self.get_parameter(name).value if self.has_parameter(name) else default_parameter
@@ -217,6 +248,7 @@ class SimulationManager(Node):
         self._object_controller.set_stage_settings(self.stage_settings[self.current_stage_name])
         self._object_controller.spawn_dynamic_obstacles(self.arena_size)
         self._object_controller.spawn_static_obstacles(self.arena_size)
+        self.publish_occupancy_grid()
 
     def is_clear_of_static_obstacles(self, start, goal, clearence: float = 1.5) -> bool:
         start_clear = self._object_controller.occupancy_grid.is_free(start[0], start[1])
