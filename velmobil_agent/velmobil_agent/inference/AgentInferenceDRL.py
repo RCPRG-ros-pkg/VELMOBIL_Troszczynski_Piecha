@@ -15,7 +15,7 @@ from nav2_msgs.action import NavigateToPose
 from action_msgs.msg import GoalStatus
 from velmobil_interfaces.srv import InferenceScenario
 import time
-from velmobil_agent.common.logs_creators import save_trial_outputs, evaluation_summary, record_outcome_elapsed_time
+from velmobil_agent.common.logs_creators import save_trial_outputs, evaluation_summary, record_outcome_elapsed_time_while_inference
 from ros_gz_interfaces.srv import ControlWorld
 
 
@@ -241,19 +241,19 @@ class AgentInferenceDRL(Node):
                 return NavigateToPose.Result()
             elapsed = steps * step_time
             if self.max_navigation_time > 0.0 and elapsed > self.max_navigation_time:
-                record_outcome_elapsed_time(self, "timeout", elapsed)
+                record_outcome_elapsed_time_while_inference(self, "timeout", elapsed)
                 goal_handle.abort()
                 self.stop_robot()
                 self.get_logger().warn(f"Goal Aborted - navigation time exceeded {self.max_navigation_time:.1f}s")
                 return NavigateToPose.Result()
             if self.latest_full_state["odom"]["current_distance"] < self.goal_tolerance:
-                record_outcome_elapsed_time(self, "reached", elapsed)
+                record_outcome_elapsed_time_while_inference(self, "reached", elapsed)
                 goal_handle.succeed()
                 self.stop_robot()
                 self.get_logger().info(f"Goal Reached in {elapsed:.2f}s")
                 return NavigateToPose.Result()
             if self.abort_on_collision and bool(np.any(self.latest_full_state["lidar"]["raw_ranges"] < self.collision_range)):
-                record_outcome_elapsed_time(self, "collision", elapsed)
+                record_outcome_elapsed_time_while_inference(self, "collision", elapsed)
                 goal_handle.abort()
                 self.stop_robot()
                 self.get_logger().warn(f"Goal Aborted - obstacle closer than {self.collision_range:.2f}m")

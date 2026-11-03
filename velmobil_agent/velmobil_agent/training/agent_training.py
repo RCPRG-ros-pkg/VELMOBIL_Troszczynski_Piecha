@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
+import os
 import rclpy
-import numpy as np
 import threading
 from rclpy.executors import MultiThreadedExecutor
 from .AgentTrainingDRL import AgentTrainingDRL
 from velmobil_agent.common.Model import Model
-import matplotlib.pyplot as plt
+from datetime import datetime
+
 
 TOTAL_TIMESTEPS = 300_000
-MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_5_trained_policy"
+MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_7_trained_policy"
+TRAINING_SAVE_DIR = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs"
 
 
 def main():
     rclpy.init()
-    agent_training_drl_node = AgentTrainingDRL()
+    training_save_path = os.path.join(TRAINING_SAVE_DIR, f"PPO_{datetime.now().strftime('%d%m%Y_%H%M')}.csv")
+    agent_training_drl_node = AgentTrainingDRL(training_save_path = training_save_path)
     executor = MultiThreadedExecutor()
     executor.add_node(agent_training_drl_node)
 
@@ -35,24 +38,9 @@ def main():
         verbose=1,
         seed=agent_training_drl_node.get_parameter('seed').value
     )
-
     try:
         model.train(total_timesteps=TOTAL_TIMESTEPS)
         model.save(MODEL_SAVE_PATH)
-        rewards = np.array(agent_training_drl_node.episode_rewards)
-        window = 20
-        plt.figure()
-        plt.plot(rewards, alpha=0.3, label='Episode reward')
-        if len(rewards) >= window:
-            moving_avg = np.convolve(rewards, np.ones(window) / window, mode='valid')
-            plt.plot(np.arange(window - 1, len(rewards)), moving_avg, label=f'Moving average')
-        plt.title('Episode rewards')
-        plt.xlabel('Episode')
-        plt.ylabel('Episode reward')
-        plt.legend()
-        plt.grid()
-        plt.tight_layout()
-        plt.savefig('/root/ws/src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots/PPO_5_episode_rewards.png')
     except KeyboardInterrupt:
         pass
     finally:

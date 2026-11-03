@@ -277,6 +277,7 @@ class SimulationManager(Node):
             return response
         self.apply_start_goal()
         self.fill_start_goal_response(response)
+        response.stage = self.current_stage_name
         response.success = True
         response.message = f"\n| Current Stage Level: {self.current_stage_name}\n"
         response.message += "| New Stage: Yes\n" if request.change_stage != 0 else "| New Stage: No\n"

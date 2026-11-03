@@ -13,7 +13,7 @@ from gymnasium.spaces import Box
 from ros_gz_interfaces.srv import ControlWorld
 from velmobil_interfaces.srv import StageModification
 from std_srvs.srv import Trigger
-
+from velmobil_agent.common.logs_creators import save_training_episode, record_outcome_elapsed_time_while_training
 from velmobil_agent.training.reward_function import TrainingSignals, RewardFunction
 
 """
@@ -24,6 +24,7 @@ Agent Training DRL
 + Implements Reward function
 """
 WORLD_CONTROL_MULTI_STEP = 11
+SIMULATION_STEP_TIME = 0.01 # should be same as max_step_size in velmobil_arena.sdf file
 COLLISION_RANGE = 0.8
 
 # max_step_size = 0.01 => one sim step = 0.01s
@@ -37,14 +38,19 @@ ODOM_TIMESTAMP_DIFFERENCE = None
 
 
 class AgentTrainingDRL(Node, gym.Env):
-    def __init__(self):
+    def __init__(self, training_save_path: str = None):
         Node.__init__(self, "agent_training_drl_node", automatically_declare_parameters_from_overrides=True)
         gym.Env.__init__(self)
 
+        self.training_save_path = training_save_path
+        self.stage = ""
+        self.training_results = []
+        self.episode_outcome = "unknown"
+        self.episode_time = 0.0
         self.episode_reward = 0.0
         self.steps_this_episode = 0
         self.total_episodes = 0
-        self.episode_rewards = []
+        # self.episode_rewards = []
 
         # TEMP!!
         self.start_position = np.array([0.0, 0.0])
@@ -154,12 +160,14 @@ class AgentTrainingDRL(Node, gym.Env):
         self.step_simulation()
         if not self.stepped_event.wait(timeout=6.0):
             self.get_logger().warn("[Step] Timeout waiting for simulation step!")
+            self.save_episode("step_timeout")
             observation = self.latest_state
             return observation, 0.0, False, True, {"timeout": True}
 
         # 4. Wait for data collected after stepping simulation
         if not self.new_data_event.wait(timeout=6.0):
             self.get_logger().warn("[Step] Timeout waiting for new state data!")
+            self.save_episode("step_timeout")
             observation = self.latest_state
             return observation, 0.0, False, True, {"timeout": True}
         
@@ -167,6 +175,11 @@ class AgentTrainingDRL(Node, gym.Env):
         reward, terminated, truncated, info = self.compute_step_result()
 
         return observation, reward, terminated, truncated, info
+
+    def save_episode(self, outcome: str):
+        elapsed = self.steps_this_episode * WORLD_CONTROL_MULTI_STEP * SIMULATION_STEP_TIME
+        record_outcome_elapsed_time_while_training(self, outcome, elapsed)
+        save_training_episode(self.stage, self, self.training_results, self.training_save_path)
 
     def quick_reset_simulation(self):
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)
@@ -201,6 +214,7 @@ class AgentTrainingDRL(Node, gym.Env):
         result : StageModification.Response = future.result()
         if result.success:
             self.get_logger().info(f"{result.message}")
+            self.stage = result.stage
             self.start_position = [result.initial_pos_x, result.initial_pos_y]
             self.goal_position = [result.goal_pos_x, result.goal_pos_y]
             self.goal_tolerance = result.goal_tolerance
@@ -245,7 +259,7 @@ class AgentTrainingDRL(Node, gym.Env):
         self.previous_normalized_goal_distance = training_signals.normalized_goal_distance
         self.previous_action_vector = training_signals.current_action_vector
         if terminated or truncated:
-            self.episode_rewards.append(self.episode_reward)
+            self.save_episode("reached" if reached_goal else "collision" if collided else "timeout")
             self.get_logger().info(f"Episode {self.total_episodes} ended. Steps: {self.steps_this_episode}, Collided: {collided}, Reached Goal: {reached_goal}, Distance to Goal: {training_signals.goal_distance:.2f}, Episode Reward: {self.episode_reward:.2f}")
 
         info = {"collided": collided, "reached_goal": reached_goal}

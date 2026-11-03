@@ -5,6 +5,7 @@ uint8 STAGE_DOWN = 3
 bool change_start_goal
 uint8 change_stage
 ---
+string stage
 float64 initial_pos_x
 float64 initial_pos_y
 float64 goal_pos_x

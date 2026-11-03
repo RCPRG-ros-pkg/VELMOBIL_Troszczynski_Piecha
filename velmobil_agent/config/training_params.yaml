@@ -2,7 +2,7 @@ agent_training_drl_node:
   ros__parameters:
     seed: 0
     max_steps_per_episode: 250
-    stage_shift_episodes: [5000000, 500000000] # episodes for stage upshift
+    stage_shift_episodes: [800, 1600] # episodes for stage upshift
     quick_reroll_episode_rate: 20 # goal_position + start_position reroll
     hard_reroll_episode_rate: 40 # whole stage reroll
     reward_function_class_name: "RewardFunction3" # choose reward function class name based on velmobil_agent/training/reward_function.py file
