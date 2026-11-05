@@ -3,9 +3,10 @@ import os
 import numpy as np
 from ament_index_python.packages import get_package_share_directory
 import rclpy
+from threading import Event
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
-from velmobil_interfaces.srv import StageModification, InferenceScenario
+from velmobil_interfaces.srv import StageModification, InferenceScenario, SetPose
 from std_srvs.srv import Trigger
 from dataclasses import dataclass
 from gz.transport13 import Node as GZNode
@@ -58,7 +59,7 @@ class ObjectController:
         
         self.set_stage_settings(stage_settings)
         self.static_obstacle_positions = []
-        self.occupancy_grid = OccupancyGrid(0.25, np.array([12.0, 12.0]), np.array([0.0, 0.0]))
+        self.occupancy_grid = OccupancyGrid(0.25, np.array([20.0, 20.0]), np.array([-10.0, -10.0]))
         self._spawned_static = []
         self._spawned_dynamic = []
         self._dynamic_publishers = {}
@@ -191,6 +192,7 @@ class SimulationManager(Node):
         self.get_logger().info("[SimulationManager] initialization")
         self.arena_size = self.get_parameter("arena_size").value
         self.seed = self.parameter("seed")
+        self.__set_pose_controller_event = Event()
         if self.seed is not None:
             np.random.seed(self.seed)
 
@@ -219,21 +221,35 @@ class SimulationManager(Node):
 
         self._quick_reset_service = self.create_service(Trigger, '/quick_reset_simulation', self.handle_quick_reset_request)
         self._hard_reset_service = self.create_service(StageModification, '/hard_reset_simulation', self.handle_hard_reset_request)
+        self._roll_yaw_controller_reset = self.create_client(SetPose, '/roll_yaw_controller/set_pose')
         self._inference_scenario_service = self.create_service(InferenceScenario, '/inference_scenario', self.handle_inference_scenario_request)
         self._occupancy_grid_publisher = self.create_publisher(OccupancyGridMsg, '/occupancy_grid', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
 
+    def set_pose_roll_yaw_controller(self) -> None:
+        req = SetPose.Request()
+        req.point.x = float(self.start_position[0])
+        req.point.y = float(self.start_position[1])
+        req.point.z = 0.0 ## currently its zero. Remember about it in future if we wanna set initial yaw.
+        future = self._roll_yaw_controller_reset.call_async(req)
+        future.add_done_callback(self.set_pose_controller_event_setter)
+    def set_pose_controller_event_setter(self, future):
+        result = future.result()
+        if result.success:
+            self.__set_pose_controller_event.set()    
+        else:
+            self.get_logger().warn("RollYawController set_pose service failed")    
+
     def publish_occupancy_grid(self) -> None:
         grid = self._object_controller.occupancy_grid
-        data = grid.inflated_grid[::-1, ::-1].T # flipped format for ROS2 occupancy grid msg
-        x_min, y_min = grid.reverse_index_grid(grid.inflated_grid.shape[0] - 1, grid.inflated_grid.shape[1] - 1)
+        data = grid.inflated_grid[::-1, ::-1].T # numpy index -> standard index [y, x], as expected by nav_msgs
         msg = OccupancyGridMsg()
-        msg.header.frame_id = '/odom'
+        msg.header.frame_id = 'odom'
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.info.resolution = float(grid.voxel_size)
         msg.info.width = data.shape[1]
         msg.info.height = data.shape[0]
-        msg.info.origin.position.x = float((x_min + grid.grid_origin[0]) * grid.voxel_size)
-        msg.info.origin.position.y = float((y_min + grid.grid_origin[1]) * grid.voxel_size)
+        msg.info.origin.position.x = float(grid.map_origin[0])
+        msg.info.origin.position.y = float(grid.map_origin[1])
         msg.info.origin.orientation.w = 1.0
         msg.data = np.where(data != 0, 100, 0).astype(np.int8).flatten().tolist()
         self._occupancy_grid_publisher.publish(msg)
@@ -286,7 +302,13 @@ class SimulationManager(Node):
 
     def handle_quick_reset_request(self, request, response):
         self.get_logger().info("handle quick reset simulation")
+        self.__set_pose_controller_event.clear()
         self.apply_start_goal()
+        self.set_pose_roll_yaw_controller()
+        if not self.__set_pose_controller_event.wait(timeout=5.0):
+            response.success = False
+            response.message = "\n| Simulation quick reset not executed\n"
+            return response
         response.success = True
         response.message = "\n| Simulation quick reset executed successfully\n"
         return response

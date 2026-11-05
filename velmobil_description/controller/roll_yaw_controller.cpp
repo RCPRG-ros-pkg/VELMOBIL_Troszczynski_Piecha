@@ -16,8 +16,20 @@
 
 namespace roll_yaw_controller {
 
-
     RollYawController::RollYawController(): controller_interface::ControllerInterface() {}
+
+    void RollYawController::clear(void) {
+        twist_command = geometry_msgs::msg::Twist();
+        x = 0.0; 
+        y = 0.0; 
+        theta = 0.0;
+        
+        for (size_t i = 0; i < wheel_joint_names.size() * 2; i++) {
+            command_interfaces_[i].set_value(0.0);
+        }
+        
+    }
+
 
     controller_interface::CallbackReturn RollYawController::on_init() {
         try {
@@ -38,7 +50,6 @@ namespace roll_yaw_controller {
     }
 
     controller_interface::CallbackReturn RollYawController::on_configure(const rclcpp_lifecycle::State & /*previous_state*/) {
-
         auto callback = [this](const geometry_msgs::msg::Twist::SharedPtr msg) -> void {
             twist_command = *msg;
             RCLCPP_DEBUG(get_node()->get_logger(), "Received Twist: linear.x=%.4f, linear.y=%.4f,, angular.z=%.4f", twist_command.linear.x, twist_command.linear.y, twist_command.angular.z);
@@ -47,8 +58,18 @@ namespace roll_yaw_controller {
         cmd_vel_subscriber = get_node()->create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, callback); 
         odom_publisher = get_node()->create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
         tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(get_node());
+        set_pose_service = get_node()->create_service<SetPose_t>("/roll_yaw_controller/set_pose", std::bind(&RollYawController::setPoseCallback, this, std::placeholders::_1, std::placeholders::_2));
         RCLCPP_INFO(get_node()->get_logger(), "RollYawController configured. Subscribed to /cmd_vel, and publishing /odom.");
         return controller_interface::CallbackReturn::SUCCESS;
+    }
+
+
+    void RollYawController::setPoseCallback(std::shared_ptr<SetPose_t::Request> request, std::shared_ptr<SetPose_t::Response> response) {
+        RCLCPP_INFO(get_node()->get_logger(), "Received set_pose request: x=%.4f, y=%.4f, theta=%.4f", request->point.x, request->point.y, request->point.z);
+        x = request->point.x;
+        y = request->point.y;
+        theta = request->point.z;
+        response->success = true;
     }
 
     void RollYawController::publishOdom(const rclcpp::Time & time) {
@@ -115,23 +136,13 @@ namespace roll_yaw_controller {
     }
 
     controller_interface::CallbackReturn RollYawController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/) {
-        twist_command = geometry_msgs::msg::Twist();
-        x = 0.0; 
-        y = 0.0; 
-        theta = 0.0;
-        
-        for (size_t i = 0; i < wheel_joint_names.size() * 2; i++) {
-            command_interfaces_[i].set_value(0.0);
-        }
-        
+        clear();
         RCLCPP_INFO(get_node()->get_logger(), "RollYawController activated.");
         return controller_interface::CallbackReturn::SUCCESS;
     }
 
     controller_interface::CallbackReturn RollYawController::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/) {
-        for (size_t i = 0; i < wheel_joint_names.size(); i++) {
-            command_interfaces_[i].set_value(0.0);
-        }
+        clear();
         RCLCPP_INFO(get_node()->get_logger(), "RollYawController deactivated. Motors set to zero.");
         return controller_interface::CallbackReturn::SUCCESS;
     }

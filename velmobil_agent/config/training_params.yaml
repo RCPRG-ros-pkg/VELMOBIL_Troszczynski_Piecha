@@ -14,7 +14,7 @@ simulation_manager:
     stage_names: ["s1", "s2", "s3"]
     stages:
       s1:
-        static_obstacles_num: 0
+        static_obstacles_num: 5
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5

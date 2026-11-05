@@ -13,61 +13,54 @@ class OccupancyGrid:
         self.voxel_size = voxel_size
         self.map_shape = map_shape
         self.map_origin = map_origin
-
-        self.grid_origin = map_origin / voxel_size
-        self.grid = np.ones((int(self.map_shape[0] // self.voxel_size), int(self.map_shape[1] // self.voxel_size)), dtype=np.uint8) * FREE_SPACE
-        self.inflated_grid = np.ones((int(self.map_shape[0] // self.voxel_size), int(self.map_shape[1] // self.voxel_size)), dtype=np.uint8) * FREE_SPACE
-        self.obstacles : list[Obstacle] = []
+        self.n_x = int(round(map_shape[0] / voxel_size))
+        self.n_y = int(round(map_shape[1] / voxel_size))
+        self.clear()
 
     def clear(self):
-        self.grid = np.ones((int(self.map_shape[0] // self.voxel_size), int(self.map_shape[1] // self.voxel_size)), dtype=np.uint8) * FREE_SPACE
-        self.inflated_grid = np.ones((int(self.map_shape[0] // self.voxel_size), int(self.map_shape[1] // self.voxel_size)), dtype=np.uint8) * FREE_SPACE
+        self.grid = np.ones((self.n_x, self.n_y), dtype=np.uint8) * FREE_SPACE
+        self.inflated_grid = np.ones((self.n_x, self.n_y), dtype=np.uint8) * FREE_SPACE
         self.obstacles : list[Obstacle] = []
 
-    def cast_world_to_grid(self, x_world, y_world):
-        return (math.floor(x_world / self.voxel_size - self.grid_origin[0]), math.floor(y_world / self.voxel_size - self.grid_origin[1]))
-    def cast_grid_to_world(self, x_grid, y_grid):
-        return ((x_grid + self.grid_origin[0]) * self.voxel_size + int(self.voxel_size/2), (y_grid + self.grid_origin[1]) * self.voxel_size + int(self.voxel_size/2))
-    
-    def index_grid(self, x : int, y : int) -> tuple[int]:
+    def cast_world_to_grid(self, x_world : float, y_world : float) -> tuple[int, int]:
+        return (math.floor((x_world - self.map_origin[0]) / self.voxel_size),
+                math.floor((y_world - self.map_origin[1]) / self.voxel_size))
+
+    def cast_grid_to_world(self, x_grid : int, y_grid : int) -> tuple[float, float]:
+        return (self.map_origin[0] + (x_grid + 0.5) * self.voxel_size,
+                self.map_origin[1] + (y_grid + 0.5) * self.voxel_size)
+
+    def index_grid(self, x : int, y : int) -> tuple[int, int]:
         """Pass standard index, receive numpy index"""
-        grid_center_x = int ((self.map_shape[0] - self.map_origin[0]) // self.voxel_size)
-        grid_center_y = int ((self.map_shape[1] - self.map_origin[1]) // self.voxel_size)
-        return (grid_center_x - x, grid_center_y - y)
+        return (self.n_x - 1 - x, self.n_y - 1 - y)
 
-    def reverse_index_grid(self, x : int, y : int) -> tuple[int]:
+    def reverse_index_grid(self, row : int, col : int) -> tuple[int, int]:
         """Pass numpy index, receive standard index"""
-        grid_center_x = int ((self.map_shape[0] - self.map_origin[0]) // self.voxel_size)
-        grid_center_y = int ((self.map_shape[1] - self.map_origin[1]) // self.voxel_size)
-        return (grid_center_x -x, grid_center_y - y) ## no mistake - its the same
+        return (self.n_x - 1 - row, self.n_y - 1 - col) ## no mistake - its the same
 
-
+    def in_bounds(self, x : int, y : int) -> bool:
+        """Check standard index"""
+        return 0 <= x < self.n_x and 0 <= y < self.n_y
 
     def place_obstacle(self, obstacle : Obstacle):
         self.obstacles.append(obstacle)
-        left_upper_corner = (obstacle.center_x + obstacle.size_x/2, obstacle.center_y + obstacle.size_y/2)
-        right_lower_corner = (obstacle.center_x - obstacle.size_x/2, obstacle.center_y - obstacle.size_y/2)
-        for x in range(int(left_upper_corner[0]), int(right_lower_corner[0])):
-            for y in range(int(left_upper_corner[1]), int(right_lower_corner[1])):
-                self.grid[self.index_grid(x,y)] = LETHAL_SPACE
+        x_min, y_min = self.cast_world_to_grid(obstacle.center_x - obstacle.size_x / 2, obstacle.center_y - obstacle.size_y / 2)
+        x_max, y_max = self.cast_world_to_grid(obstacle.center_x + obstacle.size_x / 2, obstacle.center_y + obstacle.size_y / 2)
+        for x in range(x_min, x_max):
+            for y in range(y_min, y_max):
+                if self.in_bounds(x, y):
+                    self.grid[self.index_grid(x, y)] = LETHAL_SPACE
 
     def remove_obstacle(self, obstacle_name: str):
         self.obstacles = [o for o in self.obstacles if o.name != obstacle_name]
 
-    def inflate(self, inflation_range):
-        for x in range(self.grid.shape[0]):
-            for y in range(self.grid.shape[1]):
-                if self.grid[x,y] != FREE_SPACE:
-                    try:
-                        self.inflated_grid[x-inflation_range : x+inflation_range , y-inflation_range : y+inflation_range] = LETHAL_SPACE
-                    except:
-                        pass # for now there is no bounds checking
+    def inflate(self, inflation_range : int):
+        self.inflated_grid = self.grid.copy()
+        for row, col in np.argwhere(self.grid != FREE_SPACE):
+            self.inflated_grid[max(row - inflation_range, 0) : row + inflation_range + 1,
+                               max(col - inflation_range, 0) : col + inflation_range + 1] = LETHAL_SPACE
 
     def is_free(self, x_world : float, y_world : float) -> bool:
-        return True if self.inflated_grid[self.index_grid(*self.cast_world_to_grid(x_world, y_world))] == FREE_SPACE else False
-
-
-    
-        
-
-    
+        """Points outside the map are treated as occupied"""
+        x, y = self.cast_world_to_grid(x_world, y_world)
+        return self.in_bounds(x, y) and self.inflated_grid[self.index_grid(x, y)] == FREE_SPACE
