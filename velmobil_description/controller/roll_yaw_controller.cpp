@@ -89,20 +89,22 @@ namespace roll_yaw_controller {
         odometry_msg.twist.twist = twist_command;
         odom_publisher->publish(odometry_msg);
 
-        geometry_msgs::msg::TransformStamped tf_msg;
-        tf_msg.header.stamp = time;
-        tf_msg.header.frame_id = "odom";
-        tf_msg.child_frame_id  = "base_footprint";
-
-        tf_msg.transform.translation.x = x;
-        tf_msg.transform.translation.y = y;
-        tf_msg.transform.translation.z = 0.0;
-        tf_msg.transform.rotation.x = 0.0;
-        tf_msg.transform.rotation.y = 0.0;
-        tf_msg.transform.rotation.z = orientation_z;
-        tf_msg.transform.rotation.w = orientation_w;
-
-        tf_broadcaster -> sendTransform(tf_msg);
+        // TF odom -> base_footprint is now published by gz OdometryPublisher (ground truth, see macros.urdf.xacro: ground_truth)
+        (void)time;
+        // geometry_msgs::msg::TransformStamped tf_msg;
+        // tf_msg.header.stamp = time;
+        // tf_msg.header.frame_id = "odom";
+        // tf_msg.child_frame_id  = "base_footprint";
+        //
+        // tf_msg.transform.translation.x = x;
+        // tf_msg.transform.translation.y = y;
+        // tf_msg.transform.translation.z = 0.0;
+        // tf_msg.transform.rotation.x = 0.0;
+        // tf_msg.transform.rotation.y = 0.0;
+        // tf_msg.transform.rotation.z = orientation_z;
+        // tf_msg.transform.rotation.w = orientation_w;
+        //
+        // tf_broadcaster -> sendTransform(tf_msg);
     }
 
     controller_interface::InterfaceConfiguration RollYawController::command_interface_configuration() const {

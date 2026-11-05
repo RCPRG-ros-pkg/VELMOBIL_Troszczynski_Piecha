@@ -230,8 +230,9 @@ class SimulationManager(Node):
         req.point.x = float(self.start_position[0])
         req.point.y = float(self.start_position[1])
         req.point.z = 0.0 ## currently its zero. Remember about it in future if we wanna set initial yaw.
-        future = self._roll_yaw_controller_reset.call_async(req)
-        future.add_done_callback(self.set_pose_controller_event_setter)
+        # probably wont be used in future because GT publishing from gazebo has been repaired
+        # future = self._roll_yaw_controller_reset.call_async(req)
+        # future.add_done_callback(self.set_pose_controller_event_setter)
     def set_pose_controller_event_setter(self, future):
         result = future.result()
         if result.success:
@@ -304,11 +305,11 @@ class SimulationManager(Node):
         self.get_logger().info("handle quick reset simulation")
         self.__set_pose_controller_event.clear()
         self.apply_start_goal()
-        self.set_pose_roll_yaw_controller()
-        if not self.__set_pose_controller_event.wait(timeout=5.0):
-            response.success = False
-            response.message = "\n| Simulation quick reset not executed\n"
-            return response
+        # self.set_pose_roll_yaw_controller()
+        # if not self.__set_pose_controller_event.wait(timeout=5.0):
+        #     response.success = False
+        #     response.message = "\n| Simulation quick reset not executed\n"
+        #     return response
         response.success = True
         response.message = "\n| Simulation quick reset executed successfully\n"
         return response

@@ -141,12 +141,15 @@ def generate_launch_description():
             '/back_depth_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
             '/model/velmobil/odometry_with_covariance@nav_msgs/msg/Odometry[gz.msgs.OdometryWithCovariance',
             '/world/velmobil_arena/control@ros_gz_interfaces/srv/ControlWorld',
+            '/gt_position@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+            '/model/velmobil/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
             '/world/velmobil_arena/set_pose@ros_gz_interfaces/srv/SetEntityPose',
             '/world/velmobil_arena/create@ros_gz_interfaces/srv/SpawnEntity',
             '/world/velmobil_arena/remove@ros_gz_interfaces/srv/DeleteEntity',
             '/model/dynamic_obstacle_rectangle/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
             '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'
         ],
+        remappings=[('/model/velmobil/tf', '/tf')],
         parameters=[{'use_sim_time': True}],
         output='screen'
     )
