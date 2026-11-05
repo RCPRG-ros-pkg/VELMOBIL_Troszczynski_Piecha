@@ -33,18 +33,14 @@ cd VELMOBIL_Troszczynski_Piecha
 docker build -t velmobil_simulation:latest .
 ```
 
-2. Add permissions to bash script in order to run container and run it
+2. Add permissions to bash script in order to run container
 ```bash
 chmod +x docker_launcher.sh
 ```
 
+3. Run or attach to running container
 ```bash
 ./docker_launcher.sh
-```
-
-3. Get into container
-```bash
-docker exec -it velmobil_simulation bash
 ```
 
 4. Build and source
