@@ -38,6 +38,8 @@ Start Visual Paradigm, choose **Project → Open**, and select
 [`velmobil_diagrams/VELMOBIL.vpp`](velmobil_diagrams/VELMOBIL.vpp).
 All diagrams are listed in the **Diagram Navigator** and can be edited there.
 
+## Documentation
+See [DOCUMENTATION.md](DOCUMENTATION.md) for the repository structure, ROS 2 packages, configuration etc.
 
 ## Instruction
 See [INSTRUCTION.md](INSTRUCTION.md) for how to run the simulation, training and inference, and how to drive VELMOBIL.
