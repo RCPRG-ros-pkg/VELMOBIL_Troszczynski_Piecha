@@ -151,7 +151,7 @@ Stages are defined in the YAML files by the number of static and dynamic obstacl
 
 ### Adding a reward function
 
-Create a new subclass of `RewardFunction` in `training/reward_function.py` then set its class name in `training_params.yaml` under `reward_function_class_name`.
+Create a new subclass of `RewardFunction` in `training/reward_function.py` and set its class name in `training_params.yaml` under `reward_function_class_name`.
 
 ## Configuration
 

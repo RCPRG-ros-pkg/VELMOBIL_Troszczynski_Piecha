@@ -34,7 +34,7 @@ You can view and edit the diagrams in Visual Paradigm.
 
 ### Opening the diagrams
 
-Start Visual Paradigm, choose **Project → Open**, and select
+Start Visual Paradigm, choose **Project -> Open**, and select
 [`velmobil_diagrams/VELMOBIL.vpp`](velmobil_diagrams/VELMOBIL.vpp).
 All diagrams are listed in the **Diagram Navigator** and can be edited there.
 
