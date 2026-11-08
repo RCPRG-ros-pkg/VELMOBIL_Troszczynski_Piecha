@@ -8,16 +8,14 @@ from velmobil_agent.inference.AgentInferenceDRL import AgentInferenceDRL
 from velmobil_agent.common.Model import Model
 
 
-MODEL_LOAD_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_5_trained_policy.zip"
-EVALUATION_SAVE_DIR = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs"
+MODEL_LOAD_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_trained_policy_03112026_0040.zip"
+EVALUATION_SAVE_PATH = f"src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_{datetime.now().strftime('%d%m%Y_%H%M')}.csv"
 
 
 def main():
     rclpy.init()
-    evaluation_save_path = os.path.join(EVALUATION_SAVE_DIR, f"PPO_{datetime.now().strftime('%d%m%Y_%H%M')}.csv")
-
     model = Model(model_path = MODEL_LOAD_PATH)
-    agent_inference_drl_node = AgentInferenceDRL(model = model, evaluation_save_path = evaluation_save_path)
+    agent_inference_drl_node = AgentInferenceDRL(model = model, evaluation_save_path = EVALUATION_SAVE_PATH)
     executor = MultiThreadedExecutor()
     executor.add_node(agent_inference_drl_node)
 
@@ -26,7 +24,7 @@ def main():
     try:
         while rclpy.ok() and not agent_inference_drl_node.done_evaluation.wait(timeout=1.0):
             pass
-        agent_inference_drl_node.get_logger().info(f"Evaluation results saved: {evaluation_save_path}")
+        agent_inference_drl_node.get_logger().info(f"Evaluation results saved: {EVALUATION_SAVE_PATH}")
     except KeyboardInterrupt:
         pass
     finally:

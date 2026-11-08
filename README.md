@@ -18,6 +18,31 @@ What to install:
 - [Gazebo Harmonic](https://gazebosim.org/docs/harmonic/install_ubuntu/)
 
 
+## Program structure
+
+The program structure is documented as SysML diagrams that follow the
+[MeROS](https://github.com/twiniars/meros) convention (a SysML-based metamodel for ROS-based systems).
+You can view and edit the diagrams in Visual Paradigm.
+
+### Installing Visual Paradigm
+
+1. Download the installer from the [Visual Paradigm download page](https://www.visual-paradigm.com/download/).
+
+2. Go to the directory where the installer was saved, make it executable, and run it:
+```bash
+cd ~/Downloads
+chmod +x Visual_Paradigm_*_Linux64.sh
+./Visual_Paradigm_*_Linux64.sh
+```
+3. Follow the setup wizard to finish the installation.
+
+### Opening the diagrams
+
+Start Visual Paradigm, choose **Project → Open**, and select
+[`velmobil_diagrams/VELMOBIL.vpp`](velmobil_diagrams/VELMOBIL.vpp).
+All diagrams are listed in the **Diagram Navigator** and can be edited there.
+
+
 ## Guidelines
 ### Building Project
 1. Clone repository and build docker image

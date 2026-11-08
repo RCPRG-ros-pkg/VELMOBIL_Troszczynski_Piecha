@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import rclpy
 import threading
 from rclpy.executors import MultiThreadedExecutor
@@ -8,15 +7,16 @@ from velmobil_agent.common.Model import Model
 from datetime import datetime
 
 
+TIME = datetime.now().strftime('%d%m%Y_%H%M')
+
 TOTAL_TIMESTEPS = 300_000
-MODEL_SAVE_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_7_trained_policy"
-TRAINING_SAVE_DIR = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs"
+MODEL_SAVE_PATH = f"src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_trained_policy_{TIME}"
+TRAINING_SAVE_PATH = f"src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs/PPO_{TIME}.csv"
 
 
 def main():
     rclpy.init()
-    training_save_path = os.path.join(TRAINING_SAVE_DIR, f"PPO_{datetime.now().strftime('%d%m%Y_%H%M')}.csv")
-    agent_training_drl_node = AgentTrainingDRL(training_save_path = training_save_path)
+    agent_training_drl_node = AgentTrainingDRL(training_save_path = TRAINING_SAVE_PATH)
     executor = MultiThreadedExecutor()
     executor.add_node(agent_training_drl_node)
 
