@@ -28,12 +28,8 @@ You can view and edit the diagrams in Visual Paradigm.
 
 1. Download the installer from the [Visual Paradigm download page](https://www.visual-paradigm.com/download/).
 
-2. Go to the directory where the installer was saved, make it executable, and run it:
-```bash
-cd ~/Downloads
-chmod +x Visual_Paradigm_*_Linux64.sh
-./Visual_Paradigm_*_Linux64.sh
-```
+2. Go to the directory where the installer was saved, make it executable, and run it.
+
 3. Follow the setup wizard to finish the installation.
 
 ### Opening the diagrams
