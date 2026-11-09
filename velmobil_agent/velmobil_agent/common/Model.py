@@ -2,9 +2,12 @@
 import numpy as np
 import sys
 sys.modules['cv2'] = None 
-# from stable_baselines3 import PPO
-from sbx import PPO
-# from stable_baselines3.common.noise import NormalActionNoise
+import flax.linen as nn
+from velmobil_agent.common.model_configuration import ModelConfig
+
+from sbx import SAC as ALGORITHM
+CONFIGURATION = 1
+
 
 """
 Model
@@ -15,24 +18,32 @@ Model
     - env given, no model_path -> fresh policy, meant to be trained via TrainingManager.
 """
 
+ALGORITHM_NAME = ALGORITHM.__name__
+
 
 class Model:
-    def __init__(self, env=None, model_path: str = None, **model_kwargs):
+    def __init__(self, env=None, model_path: str = None, algorithm = ALGORITHM, **kwargs):
         if model_path is not None:
-            self.algo = PPO.load(model_path, env=env)
+            self.algo = algorithm.load(model_path, env=env)
         elif env is not None:
-            n_actions = env.action_space.shape[-1]
-            # action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-            self.algo = PPO("MlpPolicy", env, **model_kwargs)#, action_noise=action_noise)
+            self.total_timesteps, hiperparams, policy_kwargs, actor_critic = self.load_config()
+            if ALGORITHM_NAME == "SAC":
+                self.algo = algorithm("SimbaPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
+            else:
+                self.algo = algorithm("MlpPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
         else:
             raise ValueError("Model needs either model_path (inference) or env (fresh training)")
+
+    def load_config(self) -> tuple[int, dict, dict, nn.Module | None]:
+        model_configuration = ModelConfig.choose_model_config(f"{ALGORITHM_NAME}Config{CONFIGURATION}")
+        return model_configuration()
 
     def predict(self, observation, deterministic: bool = True):
         action, _ = self.algo.predict(observation, deterministic=deterministic)
         return action
 
-    def train(self, total_timesteps: int, **kwargs):
-        self.algo.learn(total_timesteps=total_timesteps, **kwargs)
+    def train(self, **kwargs):
+        self.algo.learn(total_timesteps=self.total_timesteps, **kwargs)
 
     def save(self, path: str):
         self.algo.save(path)

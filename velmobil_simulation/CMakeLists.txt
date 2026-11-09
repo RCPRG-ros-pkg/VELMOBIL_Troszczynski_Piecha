@@ -11,7 +11,6 @@ find_package(ira_laser_tools REQUIRED)
 
 install(DIRECTORY
   rviz
-  gz_bridge
   launch
   worlds
   DESTINATION share/${PROJECT_NAME}
