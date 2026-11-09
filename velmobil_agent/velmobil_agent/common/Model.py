@@ -11,11 +11,12 @@ CONFIGURATION = 1
 
 """
 Model
-+ Wraps an SB3 policy so AgentDRL/TrainingManager don't touch SB3 directly.
++ Wraps an SB3/SBX policy so AgentDRL don't touch SB3/SBX directly.
++ Use ModelConfig abstraction class to initialize hiperparameters and DNN architectures
 + Two initialization paths:
     - model_path given -> load a trained policy for inference (env optional, only
       needed if you intend to keep training the loaded policy).
-    - env given, no model_path -> fresh policy, meant to be trained via TrainingManager.
+    - env given, no model_path -> fresh policy.
 """
 
 ALGORITHM_NAME = ALGORITHM.__name__
@@ -28,6 +29,7 @@ class Model:
         elif env is not None:
             self.total_timesteps, hiperparams, policy_kwargs, actor_critic = self.load_config()
             if ALGORITHM_NAME == "SAC":
+                #   "SimbaPolicy" - https://arxiv.org/pdf/2410.09754v2
                 self.algo = algorithm("SimbaPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
             else:
                 self.algo = algorithm("MlpPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)

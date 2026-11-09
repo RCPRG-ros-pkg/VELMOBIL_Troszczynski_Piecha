@@ -25,6 +25,7 @@ VELMOBIL_Troszczynski_Piecha/
 │   └── velmobil_agent
 │       ├── common
 │       │   ├── logs_creators.py
+│       │   ├── model_configuration.py
 │       │   ├── Model.py
 │       │   ├── preprocessing.py
 │       │   └── RobotStateData.py
@@ -159,7 +160,8 @@ Create a new subclass of `RewardFunction` in `training/reward_function.py` and s
 |---|---|
 | Training parameters, stages, reward function | `velmobil_agent/config/training_params.yaml` |
 | Inference parameters, stages, trials per stage | `velmobil_agent/config/inference_params.yaml` |
-| Total timesteps, model save path | `velmobil_agent/velmobil_agent/training/agent_training.py` |
+| Model save path | `velmobil_agent/velmobil_agent/training/agent_training.py` |
+| Model hyperparameters configuration or DNN arch | `velmobil_agent/velmobil_agent/common/model_configuration.py` |
 | Policy used for inference | `MODEL_LOAD_PATH` in `velmobil_agent/velmobil_agent/inference/agent_inference.py` |
 | Physics step | `max_step_size` in `velmobil_simulation/worlds/velmobil_arena.sdf`. Must match `SIMULATION_STEP_TIME` parameter |
 
