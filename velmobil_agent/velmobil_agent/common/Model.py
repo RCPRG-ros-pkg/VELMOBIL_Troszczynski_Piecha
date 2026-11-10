@@ -5,8 +5,8 @@ sys.modules['cv2'] = None
 import flax.linen as nn
 from velmobil_agent.common.model_configuration import ModelConfig
 
-from sbx import SAC as ALGORITHM
-CONFIGURATION = 1
+from sbx import PPO as ALGORITHM
+CONFIGURATION = 3
 
 
 """
@@ -29,7 +29,7 @@ class Model:
         elif env is not None:
             self.total_timesteps, hiperparams, policy_kwargs, actor_critic = self.load_config()
             #   "SimbaPolicy" - https://arxiv.org/pdf/2410.09754v2
-            self.algo = algorithm("SimbaPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
+            self.algo = algorithm("MlpPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
         else:
             raise ValueError("Model needs either model_path (inference) or env (fresh training)")
 

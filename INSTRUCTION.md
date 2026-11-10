@@ -56,6 +56,12 @@ In order to test particular trained policy, go to `velmobil_agent/inference/agen
 ros2 launch velmobil_agent inference.launch.py
 ```
 
+### How to draw plots
+Drawing plots can be done via command:
+```bash
+python3 src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/velmobil_agent/common/visualization.py
+```
+
 ### How to control velmobil
 
 #### Using floating controller
