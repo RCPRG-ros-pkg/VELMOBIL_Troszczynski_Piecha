@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [ "$(docker inspect -f '{{.State.Running}}' velmobil_simulation)" = "false" ]; then
+if [ "$(docker inspect -f '{{.State.Running}}' velmobil_simulation 2>/dev/null)" != "true" ]; then
     xhost +local:docker
 
     docker rm -f velmobil_simulation 2>/dev/null || true
