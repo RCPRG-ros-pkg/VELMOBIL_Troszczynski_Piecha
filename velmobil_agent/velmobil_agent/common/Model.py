@@ -28,11 +28,8 @@ class Model:
             self.algo = algorithm.load(model_path, env=env)
         elif env is not None:
             self.total_timesteps, hiperparams, policy_kwargs, actor_critic = self.load_config()
-            if ALGORITHM_NAME == "SAC":
-                #   "SimbaPolicy" - https://arxiv.org/pdf/2410.09754v2
-                self.algo = algorithm("SimbaPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
-            else:
-                self.algo = algorithm("MlpPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
+            #   "SimbaPolicy" - https://arxiv.org/pdf/2410.09754v2
+            self.algo = algorithm("SimbaPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
         else:
             raise ValueError("Model needs either model_path (inference) or env (fresh training)")
 
