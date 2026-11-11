@@ -19,6 +19,7 @@ from gz.msgs10.twist_pb2 import Twist as GZTwist
 from velmobil_agent.occupancy_grid.OccupancyGrid import Obstacle, OccupancyGrid
 from velmobil_agent.occupancy_grid.BlenderObjParser import blender_obj_parser, get_path_to_obj_map
 from nav_msgs.msg import OccupancyGrid as OccupancyGridMsg
+from visualization_msgs.msg import Marker, MarkerArray
 from rclpy.qos import QoSProfile, DurabilityPolicy
 
 
@@ -240,6 +241,7 @@ class SimulationManager(Node):
         self._roll_yaw_controller_reset = self.create_client(SetPose, '/roll_yaw_controller/set_pose')
         self._inference_scenario_service = self.create_service(InferenceScenario, '/inference_scenario', self.handle_inference_scenario_request)
         self._occupancy_grid_publisher = self.create_publisher(OccupancyGridMsg, '/occupancy_grid', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self._start_goal_markers_publisher = self.create_publisher(MarkerArray, '/start_goal_markers', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
 
     def set_pose_roll_yaw_controller(self) -> None:
         req = SetPose.Request()
@@ -270,6 +272,34 @@ class SimulationManager(Node):
         msg.info.origin.orientation.w = 1.0
         msg.data = np.where(data != 0, 100, 0).astype(np.int8).flatten().tolist()
         self._occupancy_grid_publisher.publish(msg)
+
+    def publish_start_goal_markers(self) -> None:
+        markers_data = [
+            (0, 'start', self.start_position, (0.85, 0.9, 0.1)),
+            (1, 'goal', self.goal_position, (0.0, 0.8, 0.0)),
+        ]
+        marker_array = MarkerArray()
+        for marker_id, namespace, position, (r, g, b) in markers_data:
+            marker = Marker()
+            marker.header.frame_id = 'odom'
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = namespace
+            marker.id = marker_id
+            marker.type = Marker.SPHERE
+            marker.action = Marker.ADD
+            marker.pose.position.x = float(position[0])
+            marker.pose.position.y = float(position[1])
+            marker.pose.position.z = 0.0
+            marker.pose.orientation.w = 1.0
+            marker.scale.x = 1.0  # SPHERE scale = diameter -> radius 0.5 m
+            marker.scale.y = 1.0
+            marker.scale.z = 1.0
+            marker.color.r = r
+            marker.color.g = g
+            marker.color.b = b
+            marker.color.a = 0.5
+            marker_array.markers.append(marker)
+        self._start_goal_markers_publisher.publish(marker_array)
 
     def parameter(self, name: str, default_parameter = None):
         return self.get_parameter(name).value if self.has_parameter(name) else default_parameter
@@ -311,6 +341,7 @@ class SimulationManager(Node):
             self.get_logger().warn("Goal object not moved")
         if not self._object_controller.move_start_object(self.start_position):
             self.get_logger().warn("Start object not moved")
+        self.publish_start_goal_markers()
 
     def fill_start_goal_response(self, response) -> None:
         response.initial_pos_x = float(self.start_position[0])

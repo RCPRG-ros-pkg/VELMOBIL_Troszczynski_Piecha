@@ -282,12 +282,12 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
-    - Alpha: 0.699999988079071
+    - Alpha: 0.9
       Class: rviz_default_plugins/Map
       Color Scheme: map
       Draw Behind: false
       Enabled: true
-      Name: Map
+      Name: OccupancyGrid
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -302,6 +302,19 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: occupancy_grid_updates
       Use Timestamp: false
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: StartGoalMarkers
+      Namespaces:
+        goal: true
+        start: true
+      Topic:
+        Depth: 5
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /start_goal_markers
       Value: true
   Enabled: true
   Global Options:
