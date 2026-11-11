@@ -17,6 +17,9 @@ class OccupancyGrid:
         self.n_y = int(round(map_shape[1] / voxel_size))
         self.clear()
 
+    def _shape_params(self):
+        return (self.voxel_size, self.map_shape, self.map_origin)
+
     def clear(self):
         self.grid = np.ones((self.n_x, self.n_y), dtype=np.uint8) * FREE_SPACE
         self.inflated_grid = np.ones((self.n_x, self.n_y), dtype=np.uint8) * FREE_SPACE
@@ -51,8 +54,15 @@ class OccupancyGrid:
                 if self.in_bounds(x, y):
                     self.grid[self.index_grid(x, y)] = LETHAL_SPACE
 
+    def place_obstacles(self, obstacle_list : list[Obstacle]):
+        for obstacle in obstacle_list:
+            self.place_obstacle(obstacle=obstacle)
+
     def remove_obstacle(self, obstacle_name: str):
         self.obstacles = [o for o in self.obstacles if o.name != obstacle_name]
+
+    def remove_obstacles(self):
+        self.obstacles = []
 
     def inflate(self, inflation_range : int):
         self.inflated_grid = self.grid.copy()
@@ -64,3 +74,13 @@ class OccupancyGrid:
         """Points outside the map are treated as occupied"""
         x, y = self.cast_world_to_grid(x_world, y_world)
         return self.in_bounds(x, y) and self.inflated_grid[self.index_grid(x, y)] == FREE_SPACE
+
+    def __add__(self, other):
+        # if self._shape_params() != other._shape_params():
+        #     return None
+        params = self._shape_params()
+        result = OccupancyGrid(*params)
+        result.obstacles = self.obstacles + other.obstacles
+        result.grid = np.clip(self.grid + other.grid, FREE_SPACE, LETHAL_SPACE)
+        return result
+        

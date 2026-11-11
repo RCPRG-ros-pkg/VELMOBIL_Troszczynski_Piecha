@@ -17,6 +17,7 @@ from gz.msgs10.entity_pb2 import Entity
 from gz.msgs10.entity_factory_pb2 import EntityFactory
 from gz.msgs10.twist_pb2 import Twist as GZTwist
 from velmobil_agent.occupancy_grid.OccupancyGrid import Obstacle, OccupancyGrid
+from velmobil_agent.occupancy_grid.BlenderObjParser import blender_obj_parser, get_path_to_obj_map
 from nav_msgs.msg import OccupancyGrid as OccupancyGridMsg
 from rclpy.qos import QoSProfile, DurabilityPolicy
 
@@ -44,6 +45,8 @@ def sdf_reader(path: str) -> str:
         return file_handler.read()
 
 
+MAP_NAME = "velmobil_gym_mini_obstacled"
+
 class ObjectController:
     def __init__(self, stage_settings: StageSettings, logger):
         self._world_name = 'velmobil_arena'
@@ -59,11 +62,25 @@ class ObjectController:
         
         self.set_stage_settings(stage_settings)
         self.static_obstacle_positions = []
-        self.occupancy_grid = OccupancyGrid(0.25, np.array([20.0, 20.0]), np.array([-10.0, -10.0]))
+        
+        self.main_occupancy_grid = OccupancyGrid(0.25, np.array([30.0, 30.0]), np.array([-15.0, -15.0]))
+        self.static_map_occupancy_grid = OccupancyGrid(0.25, np.array([30.0, 30.0]), np.array([-15.0, -15.0]))
+        self.static_obstacles_occupancy_grid = OccupancyGrid(0.25, np.array([30.0, 30.0]), np.array([-15.0, -15.0]))
+        
         self._spawned_static = []
         self._spawned_dynamic = []
         self._dynamic_publishers = {}
         self._dynamic_velocities = {}
+
+    def update_static_map_occupancy_grid(self, map_name: str) -> None:
+        map_path = get_path_to_obj_map(map_name)
+        obstacles = blender_obj_parser(map_path)
+        self.static_map_occupancy_grid.clear()
+        self.static_map_occupancy_grid.place_obstacles(obstacles)
+
+    def update_and_inflate_main_occupancy_grid(self) -> None:
+        self.main_occupancy_grid = self.static_map_occupancy_grid + self.static_obstacles_occupancy_grid
+        self.main_occupancy_grid.inflate(3)
 
     def set_stage_settings(self, stage_settings: StageSettings):
         self._static_obstacles_num = stage_settings.static_obstacles_num
@@ -86,7 +103,7 @@ class ObjectController:
             self._logger.warn(f"Failed spawn for {name}")
             return False
 
-        self.occupancy_grid.place_obstacle(Obstacle(name, float(position[0]), float(position[1]), 1.0, 1.0))
+        self.static_obstacles_occupancy_grid.place_obstacle(Obstacle(name, float(position[0]), float(position[1]), 1.0, 1.0))
         return True
 
     def remove_object(self, name: str) -> bool:
@@ -97,7 +114,7 @@ class ObjectController:
         if not (result and response.data):
             self._logger.warn(f"Failed object removing for {name}")
             return False
-        self.occupancy_grid.remove_obstacle(name)
+        self.static_obstacles_occupancy_grid.remove_obstacle(name)
         return True
 
     def set_entity_pose(self, name: str, position: np.ndarray, z: float = 0.0) -> bool:
@@ -125,7 +142,6 @@ class ObjectController:
             name = f'static_obstacle_{i}'
             if self.create_object(name, self._static_rect_obstacle_sdf, (x, y, 1.1)):
                 self._spawned_static.append(name)
-        self.occupancy_grid.inflate(3)
 
     def spawn_dynamic_obstacles(self, area_size: float) -> None:
         positions_orientations = [(-np.random.randint(-area_size / 2, area_size / 2), np.random.randint(-area_size / 2, area_size / 2),np.random.uniform(-np.pi, np.pi)) for _ in range(self._dynamic_obstacles_num)]
@@ -148,7 +164,7 @@ class ObjectController:
             self.remove_object(name)
         self._spawned_static.clear()
         self.static_obstacle_positions = []
-        self.occupancy_grid.clear()
+        self.static_obstacles_occupancy_grid.clear()
 
     def remove_dynamic_obstacles(self) -> None:
         for name in self._spawned_dynamic:
@@ -176,10 +192,10 @@ class ObjectController:
         return self.set_entity_pose('velmobil', position, z=0.1)
 
     def visualize_occupancy_grid(self) -> None:
-        for x in range(self.occupancy_grid.grid.shape[0]):
-            for y in range(self.occupancy_grid.grid.shape[1]):
-                reality_coordinates = self.occupancy_grid.cast_grid_to_world(*self.occupancy_grid.reverse_index_grid(x, y))
-                if self.occupancy_grid.inflated_grid[x, y] == 0:
+        for x in range(self.main_occupancy_grid.grid.shape[0]):
+            for y in range(self.main_occupancy_grid.grid.shape[1]):
+                reality_coordinates = self.main_occupancy_grid.cast_grid_to_world(*self.main_occupancy_grid.reverse_index_grid(x, y))
+                if self.main_occupancy_grid.inflated_grid[x, y] == 0:
                     if self.create_object(f'free_voxel_{x}_{y}', self._free_voxel_sdf, (reality_coordinates[0], reality_coordinates[1], 0.0)):
                         self._spawned_static.append(f'free_voxel_{x}_{y}')
                 else:
@@ -241,7 +257,7 @@ class SimulationManager(Node):
             self.get_logger().warn("RollYawController set_pose service failed")    
 
     def publish_occupancy_grid(self) -> None:
-        grid = self._object_controller.occupancy_grid
+        grid = self._object_controller.main_occupancy_grid
         data = grid.inflated_grid[::-1, ::-1].T # numpy index -> standard index [y, x], as expected by nav_msgs
         msg = OccupancyGridMsg()
         msg.header.frame_id = 'odom'
@@ -265,11 +281,13 @@ class SimulationManager(Node):
         self._object_controller.set_stage_settings(self.stage_settings[self.current_stage_name])
         self._object_controller.spawn_dynamic_obstacles(self.arena_size)
         self._object_controller.spawn_static_obstacles(self.arena_size)
+        self._object_controller.update_static_map_occupancy_grid(MAP_NAME)
+        self._object_controller.update_and_inflate_main_occupancy_grid()
         self.publish_occupancy_grid()
 
     def is_clear_of_static_obstacles(self, start, goal, clearence: float = 1.5) -> bool:
-        start_clear = self._object_controller.occupancy_grid.is_free(start[0], start[1])
-        goal_clear = self._object_controller.occupancy_grid.is_free(goal[0], goal[1])
+        start_clear = self._object_controller.main_occupancy_grid.is_free(start[0], start[1])
+        goal_clear = self._object_controller.main_occupancy_grid.is_free(goal[0], goal[1])
         # obstacles = np.array(self._object_controller.static_obstacle_positions, dtype = float).reshape(-1, 2)
         # return bool(np.all(np.linalg.norm(obstacles - start, axis = 1) > clearence) and np.all(np.linalg.norm(obstacles - goal, axis = 1) > clearence))
         return start_clear and goal_clear
@@ -305,11 +323,6 @@ class SimulationManager(Node):
         self.get_logger().info("handle quick reset simulation")
         self.__set_pose_controller_event.clear()
         self.apply_start_goal()
-        # self.set_pose_roll_yaw_controller()
-        # if not self.__set_pose_controller_event.wait(timeout=5.0):
-        #     response.success = False
-        #     response.message = "\n| Simulation quick reset not executed\n"
-        #     return response
         response.success = True
         response.message = "\n| Simulation quick reset executed successfully\n"
         return response
@@ -337,7 +350,7 @@ class SimulationManager(Node):
         response.message += f"| Current Goal: [{self.goal_position[0]}; {self.goal_position[1]}]\n"
         return response
 
-    def handle_inference_scenario_request(self, request, response):
+    def handle_inference_scenario_request(self, reqrebpuest, response):
         self.get_logger().info("handle inference scenario")
         if self._inference_trial >= self.trials_per_stage:
             self._inference_trial = 0
