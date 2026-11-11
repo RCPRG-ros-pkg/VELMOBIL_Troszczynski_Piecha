@@ -10,7 +10,7 @@ simulation_manager:
     seed: 42
     arena_size: 12
     stage_names: ["s1", "s2", "s3"]
-    trials_per_stage: 20
+    trials_per_stage: 50
     random_start_goal: true
     start_position: [0.0, 0.0]
     goal_position: [5.0, 0.0]

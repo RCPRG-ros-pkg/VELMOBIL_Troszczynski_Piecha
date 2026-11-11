@@ -8,7 +8,7 @@ from velmobil_agent.inference.AgentInferenceDRL import AgentInferenceDRL
 from velmobil_agent.common.Model import Model
 
 
-MODEL_LOAD_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_trained_policy_03112026_0040.zip"
+MODEL_LOAD_PATH = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies/PPO_trained_policy_10112026_2221.zip"
 EVALUATION_SAVE_PATH = f"src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_{datetime.now().strftime('%d%m%Y_%H%M')}.csv"
 
 
