@@ -342,12 +342,8 @@ class SimulationManager(Node):
         return False
 
     def apply_start_goal(self) -> None:
-        if not self._object_controller.teleport_robot(self.start_position):
-            self.get_logger().warn("Robot not moved")
-        if not self._object_controller.move_goal_object(self.goal_position):
-            self.get_logger().warn("Goal object not moved")
-        if not self._object_controller.move_start_object(self.start_position):
-            self.get_logger().warn("Start object not moved")
+        if not self._object_controller.place_markers_and_robot(self.start_position, self.goal_position):
+            self.get_logger().warn("Robot or start / goal markers not moved")
         self.publish_start_goal_markers()
 
     def fill_start_goal_response(self, response) -> None:

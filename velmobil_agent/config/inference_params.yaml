@@ -17,6 +17,7 @@ simulation_manager:
     reroll_obstacles_each_trial: true
     stages:
       s1:
+        map: "velmobil_gym_mini"
         static_obstacles_num: 0
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
@@ -24,6 +25,7 @@ simulation_manager:
         goal_distance: 5.0
         goal_tolerance: 0.5
       s2:
+        map: "velmobil_gym_mini"
         static_obstacles_num: 5
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
@@ -31,6 +33,7 @@ simulation_manager:
         goal_distance: 8.0
         goal_tolerance: 0.5
       s3:
+        map: "velmobil_gym_mini"
         static_obstacles_num: 5
         dynamic_obstacles_num: 2
         min_obstacle_speed: 1.2
