@@ -2,9 +2,9 @@ agent_training_drl_node:
   ros__parameters:
     seed: 0
     max_steps_per_episode: 250
-    stage_shift_episodes: [5000000, 500000000] # episodes for stage upshift
-    quick_reroll_episode_rate: 20 # goal_position + start_position reroll
-    hard_reroll_episode_rate: 40 # whole stage reroll
+    stage_shift_episodes: [10, 500000000] # episodes for stage upshift
+    quick_reroll_episode_rate: 5 # goal_position + start_position reroll
+    hard_reroll_episode_rate: 10 # whole stage reroll
     reward_function_class_name: "RewardFunction3" # choose reward function class name based on velmobil_agent/utilities/reward_function.py file
 
 simulation_manager:
@@ -14,13 +14,15 @@ simulation_manager:
     stage_names: ["s1", "s2", "s3"]
     stages:
       s1:
-        static_obstacles_num: 5
+        map: "velmobil_gym_mini"
+        static_obstacles_num: 0
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
         goal_distance: 5.0
         goal_tolerance: 0.5
       s2:
+        map: "velmobil_gym_mini_obstacled"
         static_obstacles_num: 5
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
@@ -28,6 +30,7 @@ simulation_manager:
         goal_distance: 8.0
         goal_tolerance: 0.5
       s3:
+        map: "velmobil_gym_mini_obstacled"
         static_obstacles_num: 8
         dynamic_obstacles_num: 2
         min_obstacle_speed: 1.2

@@ -97,10 +97,10 @@
       </spot>
     </light>
 
-    <include>
-      <!-- <uri>model://velmobil_gym_mini</uri> -->
+    <!-- <include>
       <uri>model://velmobil_gym_mini_obstacled</uri>
       <pose>0 0 0 0 0 0</pose>
-    </include>
+    </include> -->
+
   </world>
 </sdf>

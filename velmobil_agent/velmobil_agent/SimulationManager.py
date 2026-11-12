@@ -17,7 +17,7 @@ from gz.msgs10.entity_pb2 import Entity
 from gz.msgs10.entity_factory_pb2 import EntityFactory
 from gz.msgs10.twist_pb2 import Twist as GZTwist
 from velmobil_agent.occupancy_grid.OccupancyGrid import Obstacle, OccupancyGrid
-from velmobil_agent.occupancy_grid.BlenderObjParser import blender_obj_parser, get_path_to_obj_map
+from velmobil_agent.occupancy_grid.blender_utilities import blender_obj_parser, get_path_to_obj_map, create_sdf_from_obj
 from nav_msgs.msg import OccupancyGrid as OccupancyGridMsg
 from visualization_msgs.msg import Marker, MarkerArray
 from rclpy.qos import QoSProfile, DurabilityPolicy
@@ -33,6 +33,7 @@ Simulation Manager
 
 @dataclass(frozen=True)
 class StageSettings:
+    map: str
     static_obstacles_num: int
     dynamic_obstacles_num: int
     min_obstacle_speed: float
@@ -46,7 +47,6 @@ def sdf_reader(path: str) -> str:
         return file_handler.read()
 
 
-MAP_NAME = "velmobil_gym_mini_obstacled"
 
 class ObjectController:
     def __init__(self, stage_settings: StageSettings, logger):
@@ -73,23 +73,19 @@ class ObjectController:
         self._dynamic_publishers = {}
         self._dynamic_velocities = {}
 
-    def update_static_map_occupancy_grid(self, map_name: str) -> None:
-        map_path = get_path_to_obj_map(map_name)
-        obstacles = blender_obj_parser(map_path)
-        self.static_map_occupancy_grid.clear()
-        self.static_map_occupancy_grid.place_obstacles(obstacles)
 
     def update_and_inflate_main_occupancy_grid(self) -> None:
         self.main_occupancy_grid = self.static_map_occupancy_grid + self.static_obstacles_occupancy_grid
         self.main_occupancy_grid.inflate(3)
 
     def set_stage_settings(self, stage_settings: StageSettings):
+        self._map = stage_settings.map
         self._static_obstacles_num = stage_settings.static_obstacles_num
         self._dynamic_obstacles_num = stage_settings.dynamic_obstacles_num
         self._min_obstacle_speed = stage_settings.min_obstacle_speed
         self._max_obstacle_speed = stage_settings.max_obstacle_speed
 
-    def create_object(self, name: str, sdf: str, position, yaw: float = 0.0) -> bool:
+    def create_object(self, name: str, sdf: str, position, yaw: float = 0.0, add_to_static_grid: bool = True) -> bool:
         req = EntityFactory()
         req.name = name
         req.sdf = sdf
@@ -104,8 +100,11 @@ class ObjectController:
             self._logger.warn(f"Failed spawn for {name}")
             return False
 
-        self.static_obstacles_occupancy_grid.place_obstacle(Obstacle(name, float(position[0]), float(position[1]), 1.0, 1.0))
+        if add_to_static_grid:
+            self.static_obstacles_occupancy_grid.place_obstacle(Obstacle(name, float(position[0]), float(position[1]), 1.0, 1.0))
         return True
+
+    
 
     def remove_object(self, name: str) -> bool:
         req = Entity()
@@ -130,6 +129,17 @@ class ObjectController:
             self._logger.warn(f"Set_pose request failed/timed out for {name}")
             return False
         return response.data
+
+    def spawn_world(self, map_name: str) -> None:
+        map_sdf = create_sdf_from_obj(map_name)
+        self.create_object(map_name, map_sdf, (0.0, 0.0, 0.0), 0.0, add_to_static_grid=False)
+        obstacles = blender_obj_parser(get_path_to_obj_map(map_name))
+        self.static_map_occupancy_grid.clear()
+        self.static_map_occupancy_grid.place_obstacles(obstacles)
+
+    def remove_world(self, map_name: str) -> None:
+        self.remove_object(map_name)
+        self.static_map_occupancy_grid.clear()
 
     def spawn_static_obstacles(self, area_size: float) -> None:
         positions = []
@@ -192,16 +202,6 @@ class ObjectController:
     def teleport_robot(self, position: np.ndarray) -> bool:
         return self.set_entity_pose('velmobil', position, z=0.1)
 
-    def visualize_occupancy_grid(self) -> None:
-        for x in range(self.main_occupancy_grid.grid.shape[0]):
-            for y in range(self.main_occupancy_grid.grid.shape[1]):
-                reality_coordinates = self.main_occupancy_grid.cast_grid_to_world(*self.main_occupancy_grid.reverse_index_grid(x, y))
-                if self.main_occupancy_grid.inflated_grid[x, y] == 0:
-                    if self.create_object(f'free_voxel_{x}_{y}', self._free_voxel_sdf, (reality_coordinates[0], reality_coordinates[1], 0.0)):
-                        self._spawned_static.append(f'free_voxel_{x}_{y}')
-                else:
-                    if self.create_object(f'occupied_voxel_{x}_{y}', self._occupied_voxel_sdf, (reality_coordinates[0], reality_coordinates[1], 0.0)):
-                        self._spawned_static.append(f'occupied_voxel_{x}_{y}')
     
 class SimulationManager(Node):
     def __init__(self):
@@ -242,21 +242,7 @@ class SimulationManager(Node):
         self._inference_scenario_service = self.create_service(InferenceScenario, '/inference_scenario', self.handle_inference_scenario_request)
         self._occupancy_grid_publisher = self.create_publisher(OccupancyGridMsg, '/occupancy_grid', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
         self._start_goal_markers_publisher = self.create_publisher(MarkerArray, '/start_goal_markers', QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL))
-
-    def set_pose_roll_yaw_controller(self) -> None:
-        req = SetPose.Request()
-        req.point.x = float(self.start_position[0])
-        req.point.y = float(self.start_position[1])
-        req.point.z = 0.0 ## currently its zero. Remember about it in future if we wanna set initial yaw.
-        # probably wont be used in future because GT publishing from gazebo has been repaired
-        # future = self._roll_yaw_controller_reset.call_async(req)
-        # future.add_done_callback(self.set_pose_controller_event_setter)
-    def set_pose_controller_event_setter(self, future):
-        result = future.result()
-        if result.success:
-            self.__set_pose_controller_event.set()    
-        else:
-            self.get_logger().warn("RollYawController set_pose service failed")    
+  
 
     def publish_occupancy_grid(self) -> None:
         grid = self._object_controller.main_occupancy_grid
@@ -291,13 +277,13 @@ class SimulationManager(Node):
             marker.pose.position.y = float(position[1])
             marker.pose.position.z = 0.0
             marker.pose.orientation.w = 1.0
-            marker.scale.x = 1.0  # SPHERE scale = diameter -> radius 0.5 m
+            marker.scale.x = 1.0
             marker.scale.y = 1.0
             marker.scale.z = 1.0
             marker.color.r = r
             marker.color.g = g
             marker.color.b = b
-            marker.color.a = 0.5
+            marker.color.a = 0.8
             marker_array.markers.append(marker)
         self._start_goal_markers_publisher.publish(marker_array)
 
@@ -307,11 +293,12 @@ class SimulationManager(Node):
     def change_stage(self, stage_name: str) -> None:
         self._object_controller.remove_static_obstacles()
         self._object_controller.remove_dynamic_obstacles()
+        self._object_controller.remove_world(self.stage_settings[self.current_stage_name].map)
         self.current_stage_name = stage_name
         self._object_controller.set_stage_settings(self.stage_settings[self.current_stage_name])
         self._object_controller.spawn_dynamic_obstacles(self.arena_size)
         self._object_controller.spawn_static_obstacles(self.arena_size)
-        self._object_controller.update_static_map_occupancy_grid(MAP_NAME)
+        self._object_controller.spawn_world(self.stage_settings[self.current_stage_name].map)
         self._object_controller.update_and_inflate_main_occupancy_grid()
         self.publish_occupancy_grid()
 

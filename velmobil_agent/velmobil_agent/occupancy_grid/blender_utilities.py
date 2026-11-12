@@ -8,6 +8,33 @@ def get_path_to_obj_map(map_name) -> str:
     map_path = os.path.join(get_package_share_directory("velmobil_simulation"), "worlds", "models", map_name, f"{map_name}.obj")
     return map_path
 
+def create_sdf_from_obj(map_name) -> str:
+    obj_path = get_path_to_obj_map(map_name)
+    sdf_str = f"""<?xml version='1.0' ?>
+                    <sdf version='1.9'>
+                        <model name='{map_name}'>
+                            <static>true</static>
+                            <link name='link'>
+                                <visual name='visual'>
+                                    <geometry>
+                                        <mesh>
+                                            <uri>file://{obj_path}</uri>
+                                        </mesh>
+                                    </geometry>
+                                </visual>
+                                <collision name='collision'>
+                                    <geometry>
+                                        <mesh>
+                                            <uri>file://{obj_path}</uri>
+                                        </mesh>
+                                    </geometry>
+                                </collision>
+                            </link>
+                        </model>
+                    </sdf>"""
+    return sdf_str
+
+
 
 def blender_obj_parser(filepath : str) -> list[Obstacle]:
     obstacle_list : list[Obstacle] = []
