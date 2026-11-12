@@ -68,6 +68,7 @@ class ObjectController:
         self.static_map_occupancy_grid = OccupancyGrid(0.25, np.array([30.0, 30.0]), np.array([-15.0, -15.0]))
         self.static_obstacles_occupancy_grid = OccupancyGrid(0.25, np.array([30.0, 30.0]), np.array([-15.0, -15.0]))
         
+        self.spawned_map_name: str = None
         self._spawned_static = []
         self._spawned_dynamic = []
         self._dynamic_publishers = {}
@@ -131,14 +132,23 @@ class ObjectController:
         return response.data
 
     def spawn_world(self, map_name: str) -> None:
+        if self.spawned_map_name == map_name:
+            return
+        if self.spawned_map_name is not None:
+            self.remove_world()
         map_sdf = create_sdf_from_obj(map_name)
-        self.create_object(map_name, map_sdf, (0.0, 0.0, 0.0), 0.0, add_to_static_grid=False)
+        if not self.create_object(map_name, map_sdf, (0.0, 0.0, 0.0), 0.0, add_to_static_grid=False):
+            return
+        self.spawned_map_name = map_name
         obstacles = blender_obj_parser(get_path_to_obj_map(map_name))
         self.static_map_occupancy_grid.clear()
         self.static_map_occupancy_grid.place_obstacles(obstacles)
 
-    def remove_world(self, map_name: str) -> None:
-        self.remove_object(map_name)
+    def remove_world(self) -> None:
+        if self.spawned_map_name is None:
+            return
+        self.remove_object(self.spawned_map_name)
+        self.spawned_map_name = None
         self.static_map_occupancy_grid.clear()
 
     def spawn_static_obstacles(self, area_size: float) -> None:
@@ -275,15 +285,15 @@ class SimulationManager(Node):
             marker.action = Marker.ADD
             marker.pose.position.x = float(position[0])
             marker.pose.position.y = float(position[1])
-            marker.pose.position.z = 0.0
+            marker.pose.position.z = 1.0
             marker.pose.orientation.w = 1.0
-            marker.scale.x = 1.0
-            marker.scale.y = 1.0
-            marker.scale.z = 1.0
+            marker.scale.x = 0.5
+            marker.scale.y = 0.5
+            marker.scale.z = 0.5
             marker.color.r = r
             marker.color.g = g
             marker.color.b = b
-            marker.color.a = 0.8
+            marker.color.a = 1.0
             marker_array.markers.append(marker)
         self._start_goal_markers_publisher.publish(marker_array)
 
@@ -293,7 +303,6 @@ class SimulationManager(Node):
     def change_stage(self, stage_name: str) -> None:
         self._object_controller.remove_static_obstacles()
         self._object_controller.remove_dynamic_obstacles()
-        self._object_controller.remove_world(self.stage_settings[self.current_stage_name].map)
         self.current_stage_name = stage_name
         self._object_controller.set_stage_settings(self.stage_settings[self.current_stage_name])
         self._object_controller.spawn_dynamic_obstacles(self.arena_size)
