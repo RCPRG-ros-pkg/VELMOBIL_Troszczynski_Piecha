@@ -25,7 +25,7 @@ chmod +x docker_launcher.sh
 
 3. Get into container
 ```bash
-docker exec -it velmobil_simulation bash
+./docker_launcher.sh
 ```
 
 4. Build and source
