@@ -21,7 +21,7 @@ find_package(tf2_ros REQUIRED)
 find_package(realtime_tools REQUIRED)
 find_package(gz-transport13 REQUIRED)
 find_package(gz-msgs10 REQUIRED)
-
+find_package(velmobil_interfaces REQUIRED)
 
 add_library(floating_controller SHARED
   controller/floating_controller.cpp
@@ -68,6 +68,7 @@ ament_target_dependencies(roll_yaw_controller
   nav_msgs
   tf2_ros
   realtime_tools
+  velmobil_interfaces
 )
 
 
@@ -123,6 +124,7 @@ ament_export_dependencies(
   tf2
   tf2_ros
   realtime_tools
+  velmobil_interfaces
 )
 
 

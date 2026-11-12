@@ -13,6 +13,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
+        (os.path.join('share', package_name, 'utilities'), glob('utilities/*.py')),
+        (os.path.join('share', package_name, 'occupancy_grid'), glob('occupancy_grid/*.py')),
         (os.path.join('share', package_name, 'obstacles', 'static_obstacles'), glob('obstacles/static_obstacles/*.sdf')),
         (os.path.join('share', package_name, 'obstacles', 'dynamic_obstacles'), glob('obstacles/dynamic_obstacles/*.sdf')),
     ],

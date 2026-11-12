@@ -33,6 +33,20 @@ You can view and edit the diagrams in Visual Paradigm.
 3. Follow the setup wizard to finish the installation.
 
 ### Opening the diagrams
+2. Add permissions to bash script in order to run container
+```bash
+chmod +x docker_launcher.sh
+```
+
+3. Run or attach to running container
+```bash
+./docker_launcher.sh
+```
+
+4. Build and source
+```bash
+colcon build
+```
 
 Start Visual Paradigm, choose **Project -> Open**, and select
 [`velmobil_diagrams/VELMOBIL.vpp`](velmobil_diagrams/VELMOBIL.vpp).

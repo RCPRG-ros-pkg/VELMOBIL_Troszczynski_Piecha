@@ -14,6 +14,7 @@
   <test_depend>ament_lint_common</test_depend>
 
   <depend>controller_interface</depend>
+  <depend>velmobil_interfaces</depend>
   <depend>hardware_interface</depend>
   <depend>rclcpp</depend>
   <depend>pluginlib</depend>

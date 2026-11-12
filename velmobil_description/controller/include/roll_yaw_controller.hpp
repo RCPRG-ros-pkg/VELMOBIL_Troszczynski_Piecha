@@ -7,6 +7,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
+#include <velmobil_interfaces/srv/set_pose.hpp>
 #include <string>
 #include <sstream>
 #include <vector>
@@ -19,6 +20,7 @@
 
 
 namespace roll_yaw_controller {
+    using SetPose_t = velmobil_interfaces::srv::SetPose;
 
     class RollYawController : public controller_interface::ControllerInterface {
     public:
@@ -47,11 +49,15 @@ namespace roll_yaw_controller {
         geometry_msgs::msg::Twist twist_command;
 
 
+        rclcpp::Service<SetPose_t>::SharedPtr set_pose_service;
         rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber;
         rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher;
         std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster;
-
+        
+        void clear(void);
         void publishOdom(const rclcpp::Time & time);
+
+        void setPoseCallback(std::shared_ptr<SetPose_t::Request> request, std::shared_ptr<SetPose_t::Response> response);
     };
 
 } // namespace roll_yaw_controller
