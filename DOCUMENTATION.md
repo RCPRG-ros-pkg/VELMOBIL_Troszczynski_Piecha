@@ -32,6 +32,10 @@ VELMOBIL_Troszczynski_Piecha/
 │       ├── inference
 │       │   ├── AgentInferenceDRL.py
 │       │   ├── agent_inference.py
+│       ├── occupancy_grid
+│       │   ├── blender_utilities.py
+│       │   ├── Obstacle.py
+│       │   └── OccupancyGrid.py
 │       ├── simulation
 │       │   └── SimulationManager.py
 │       └── training
@@ -54,11 +58,13 @@ VELMOBIL_Troszczynski_Piecha/
 │   │   ├── properties.urdf.xacro
 │   │   └── velmobil.urdf.xacro
 ├── velmobil_diagrams
+│   ├── SystemOverview.png
 │   └── VELMOBIL.vpp
 ├── velmobil_interfaces
 │   └── srv
 │       ├── InferenceScenario.srv
-│       └── StageModification.srv
+│       ├── StageModification.srv
+│       └── SetPose.srv
 ├── velmobil_simulation
 │   ├── launch
 │   │   └── simple_velmobil.launch.py
@@ -66,6 +72,8 @@ VELMOBIL_Troszczynski_Piecha/
 │   │   └── basic.rviz
 │   └── worlds
 │       ├── models
+│       │   ├── curved_corridors
+│       │   ├── four_way_hallway
 │       │   ├── velmobil_gym
 │       │   ├── velmobil_gym_mini
 │       │   └── velmobil_gym_mini_obstacled
@@ -111,7 +119,7 @@ Both controllers subscribe to `/cmd_vel` topic.
 
 - **Sensors:** two 2D LiDARs (left and right) are merged by `ira_laser_tools/laserscan_multi_merger` into one scan on `/lidar_fusion`.
 - **Lockstep simulation:** the agent pauses Gazebo and advances it with the `ControlWorld` service by 11 physics steps (11 × 0.01 s = 0.11 s of simulated time) per agent step, so training is not tied to real time.
-- **Scenario control:** `simulation_manager` talks to Gazebo directly through gz-transport to spawn / remove obstacles and to move the robot / start/goal markers.
+- **Scenario control:** `simulation_manager` talks to Gazebo directly through gz-transport to spawn / remove obstacles and the stage map, to move the robot / start/goal markers and to drive dynamic obstacles (`/model/dynamic_obstacle_<i>/cmd_vel`). It also publishes `/occupancy_grid` and `/start_goal_markers` for RViz.
 
 ### Services
 
@@ -121,6 +129,7 @@ Both controllers subscribe to `/cmd_vel` topic.
 | `/hard_reset_simulation` | `velmobil_interfaces/StageModification` | simulation_manager | training agent | Randomize new start & goal, stage reroll or stage up |
 | `/inference_scenario` | `velmobil_interfaces/InferenceScenario` | simulation_manager | inference agent | Prepare the next evaluation trial |
 | `/world/velmobil_arena/control` | `ros_gz_interfaces/ControlWorld` | Gazebo (via bridge) | both agents | Pause and step the simulation |
+| `/roll_yaw_controller/set_pose` | `velmobil_interfaces/SetPose` | roll_yaw_controller | simulation_manager (client created, currently unused) | Set the controller's internal robot position |
 
 ### Action
 
@@ -148,7 +157,25 @@ Before each episode the agent chooses one of the following resets:
 3. **New start & goal** every `quick_reroll_episode_rate` episodes.
 4. **Quick reset** otherwise: the robot returns to the current start.
 
-Stages are defined in the YAML files by the number of static and dynamic obstacles, dynamic obstacle speed range, start-goal distance and goal tolerance.
+Stages are defined in the YAML files by the stage map (`map`), the number of static and dynamic obstacles, dynamic obstacle speed range, start-goal distance and goal tolerance.
+
+### Occupancy grid
+
+`simulation_manager` keeps a 2D occupancy grid of the arena (`velmobil_agent/occupancy_grid/OccupancyGrid.py`), owned by its `ObjectController`.
+It is used to choose valid start and goal positions and is published for visualization.
+
+| Item | Value |
+|---|---|
+| Size / origin | 30 m × 30 m, origin at (-15, -15) in the `odom` frame |
+| Resolution | 0.25 m per cell |
+| Static map layer | Walls of the stage map (`map` in the stage settings), parsed from `velmobil_simulation/worlds/models/<map>/<map>.obj` |
+| Static obstacles layer | 1 m × 1 m footprint of every spawned static obstacle |
+| Inflation | 3 cells (0.75 m) around every occupied cell |
+| Topic | `/occupancy_grid` (`nav_msgs/OccupancyGrid`, `TRANSIENT_LOCAL`, depth 1), values 0 (free) / 100 (occupied) |
+
+The grid is rebuilt (map + static obstacles, then inflated) and published on every stage change.
+`set_start_goal_position()` draws a random start and goal and accepts them only if both lie in free cells of the inflated grid (points outside the grid count as occupied).
+Dynamic obstacles are not included in the grid.
 
 ### Adding a reward function
 
