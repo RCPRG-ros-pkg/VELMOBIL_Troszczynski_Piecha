@@ -9,7 +9,7 @@ from velmobil_agent.common.Model import Model
 
 TIME = datetime.now().strftime('%d%m%Y_%H%M')
 TRAINED_POLICIES_FOLDER = "src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/trained_policies"
-MODEL_LOAD_PATH = os.path.join(TRAINED_POLICIES_FOLDER, "PPO_trained_policy_10112026_2221.zip")
+MODEL_LOAD_PATH = os.path.join(TRAINED_POLICIES_FOLDER, "PPO_trained_policy_15112026_1323.zip")
 
 EVALUATION_SAVE_PATH = f"src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_{TIME}.csv"
 

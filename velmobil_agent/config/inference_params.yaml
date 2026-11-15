@@ -3,7 +3,7 @@ agent_inference_drl_node:
     max_navigation_time: 60.0
     abort_on_collision: true
     collision_range: 0.8
-    trained_model_name: "PPO_trained_policy_10112026_2221"
+    trained_model_name: "PPO_trained_policy_15112026_1323"
     
 
 simulation_manager:
@@ -23,21 +23,21 @@ simulation_manager:
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
-        goal_distance: 5.0
-        goal_tolerance: 0.5
+        goal_distance: 6.0
+        goal_tolerance: 0.6
       s2:
-        map: "velmobil_gym_mini"
+        map: "curved_corridors"
         static_obstacles_num: 5
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
-        goal_distance: 8.0
-        goal_tolerance: 0.5
+        goal_distance: 7.0
+        goal_tolerance: 0.6
       s3:
-        map: "velmobil_gym_mini"
+        map: "four_way_hallway"
         static_obstacles_num: 5
         dynamic_obstacles_num: 2
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
-        goal_distance: 11.0
-        goal_tolerance: 0.5
+        goal_distance: 8.0
+        goal_tolerance: 0.7
