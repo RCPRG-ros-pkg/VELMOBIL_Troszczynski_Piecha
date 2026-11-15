@@ -4,8 +4,7 @@ import sys
 sys.modules['cv2'] = None 
 import flax.linen as nn
 from velmobil_agent.common.model_configuration import ModelConfig
-
-from sbx import PPO as ALGORITHM
+import sbx
 
 
 """
@@ -18,22 +17,21 @@ Model
     - env given, no model_path -> fresh policy.
 """
 
-ALGORITHM_NAME = ALGORITHM.__name__
-CONFIGURATION = 3
-
 class Model:
-    def __init__(self, env=None, model_path: str = None, algorithm = ALGORITHM, **kwargs):
+    def __init__(self, env=None, model_path: str = None, algorithm_name: str = "PPO", algorithm_configuration: str = 3, total_timesteps: int = 250000, **kwargs):
+        self.algorithm_name = algorithm_name
+        self.algorithm_configuration = algorithm_configuration
+        algorithm = getattr(sbx, algorithm_name)
         if model_path is not None:
             self.algo = algorithm.load(model_path, env=env)
         elif env is not None:
-            self.total_timesteps, hiperparams, policy_kwargs, actor_critic = self.load_config()
-            #   "SimbaPolicy" - https://arxiv.org/pdf/2410.09754v2
-            self.algo = algorithm("MlpPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs)
+            self.total_timesteps, hiperparams, policy_kwargs, actor_critic = self.load_config(total_timesteps)
+            self.algo = algorithm("MlpPolicy", env, **hiperparams, policy_kwargs = policy_kwargs, **kwargs) #   "SimbaPolicy" - https://arxiv.org/pdf/2410.09754v2
         else:
             raise ValueError("Model needs either model_path (inference) or env (fresh training)")
 
-    def load_config(self) -> tuple[int, dict, dict, nn.Module | None]:
-        model_configuration = ModelConfig.choose_model_config(f"{ALGORITHM_NAME}Config{CONFIGURATION}")
+    def load_config(self, total_timesteps) -> tuple[int, dict, dict, nn.Module | None]:
+        model_configuration = ModelConfig.choose_model_config(f"{self.algorithm_name}Config{self.algorithm_configuration}", total_timesteps)
         return model_configuration()
 
     def predict(self, observation, deterministic: bool = True):

@@ -3,6 +3,7 @@ agent_inference_drl_node:
     max_navigation_time: 60.0
     abort_on_collision: true
     collision_range: 0.8
+    trained_model_name: "PPO_trained_policy_10112026_2221"
     
 
 simulation_manager:

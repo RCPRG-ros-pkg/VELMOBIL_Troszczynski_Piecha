@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+from datetime import datetime
 import numpy as np
 import rclpy
 import threading
@@ -37,12 +39,16 @@ LIDAR_TIMESTAMP_DIFFERENCE = None
 ODOM_TIMESTAMP_DIFFERENCE = None
 
 
+TIME = datetime.now().strftime('%d%m%Y_%H%M')
+
+
 class AgentTrainingDRL(Node, gym.Env):
     def __init__(self, training_save_path: str = None):
         Node.__init__(self, "agent_training_drl_node", automatically_declare_parameters_from_overrides=True)
         gym.Env.__init__(self)
 
-        self.training_save_path = training_save_path
+
+        self.training_save_path = os.path.join(training_save_path, f"{self.get_parameter('algorithm_name').value}_{TIME}.csv") if training_save_path else None
         self.stage = ""
         self.training_results = []
         self.episode_outcome = "unknown"
@@ -183,6 +189,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def quick_reset_simulation(self):
         self.robot_state_data_manager.odom_state_data.set_current_goal(self.goal_position)
+        self.previous_normalized_goal_distance = 1.0
         self.previous_action_vector = np.array([0.0, 0.0, 0.0])
         self.episode_reward = 0.0
         future = self.quick_reset_simulation_client.call_async(Trigger.Request())
@@ -199,6 +206,7 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def hard_reset_simulation(self, stage_reroll: bool = False, start_goal_reroll: bool = False, stage_up: bool = False):
         self.previous_normalized_goal_distance = 1.0
+        self.previous_action_vector = np.array([0.0, 0.0, 0.0])
         self.episode_reward = 0.0
         req = StageModification.Request()
         if start_goal_reroll:
@@ -240,14 +248,15 @@ class AgentTrainingDRL(Node, gym.Env):
 
     def compute_step_result(self):
         training_signals = TrainingSignals(
-            self.latest_full_state["lidar"]["raw_ranges"],
-            self.latest_full_state["odom"]["current_distance"],
-            self.latest_full_state["odom"]["normalized_distance"][0],
-            self.latest_full_state["odom"]["normalized_distance"][1],
-            self.latest_full_state["odom"]["current_velocity"][2],
-            self.previous_normalized_goal_distance,
-            self.current_action_vector,
-            self.previous_action_vector
+            raw_lidar=self.latest_full_state["lidar"]["raw_ranges"],
+            processed_ranges=self.latest_full_state["lidar"]["processed_ranges"],
+            goal_distance=self.latest_full_state["odom"]["current_distance"],
+            normalized_goal_distance=self.latest_full_state["odom"]["normalized_distance"][0],
+            normalized_bearing=self.latest_full_state["odom"]["normalized_distance"][1],
+            angular_velocity=self.latest_full_state["odom"]["current_velocity"][2],
+            previous_normalized_goal_distance=self.previous_normalized_goal_distance,
+            current_action_vector=self.current_action_vector,
+            previous_action_vector=self.previous_action_vector
         )
 
         reward, collided, reached_goal = self.reward_function(training_signals, COLLISION_RANGE, self.goal_tolerance)
