@@ -138,11 +138,11 @@ def visualization():
     plot_folder = 'src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots' 
     dfs = [('PPO', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs/PPO_10112026_2221.csv')), ('SAC', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs/SAC_09112026_2123.csv'))]
     eval_dfs = [('PPO', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_11112026_0020.csv'))]
-    plot_rewards(dfs = dfs, save_path = f'{plot_folder}/RewardsPerEpisode_2.png', smoothing_window = 1)
-    plot_success_rate(dfs = dfs, save_path = f'{plot_folder}/SuccessRatePerEpisode_2.png')
-    plot_time_to_goal(dfs = dfs, save_path = f'{plot_folder}/TimeToGoalPerEpisode_2.png')
-    plot_evaluation_outcome(dfs = eval_dfs, save_path = f'{plot_folder}/OutcomePerStage.png')
-    plot_evaluation_time_to_goal(dfs = eval_dfs, save_path = f'{plot_folder}/TimeToGoalPerStage.png')
+    plot_rewards(dfs = dfs, save_path = f'{plot_folder}/training_plots/RewardsPerEpisode_2.png', smoothing_window = 1)
+    plot_success_rate(dfs = dfs, save_path = f'{plot_folder}/training_plots/SuccessRatePerEpisode_2.png')
+    plot_time_to_goal(dfs = dfs, save_path = f'{plot_folder}/training_plots/TimeToGoalPerEpisode_2.png')
+    plot_evaluation_outcome(dfs = eval_dfs, save_path = f'{plot_folder}/inference_plots/OutcomePerStage.png')
+    plot_evaluation_time_to_goal(dfs = eval_dfs, save_path = f'{plot_folder}/inference_plots/TimeToGoalPerStage.png')
 
 
 if __name__ == "__main__":
