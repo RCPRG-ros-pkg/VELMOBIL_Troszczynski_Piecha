@@ -6,6 +6,7 @@ import numpy as np
 @dataclass
 class TrainingSignals:
     raw_lidar: np.ndarray
+    processed_ranges: np.ndarray
     goal_distance: float
     normalized_goal_distance: float
     normalized_bearing: float
@@ -94,3 +95,36 @@ class RewardFunction3(RewardFunction):
             action_smoothness_reward = -action_smoothness_weight * np.sum((signals.current_action_vector - signals.previous_action_vector) ** 2)
             reward = -step_weight + progress_reward + bearing_reward + angular_velocity_reward + action_smoothness_reward
         return float(reward), collided, reached_goal
+
+
+
+class ObstacleProximityIPAPRecNReward(RewardFunction):
+    def __call__(self, signals: TrainingSignals, collision_range: float, goal_tolerance: float) -> tuple[float, bool, bool]:
+        reach_goal_weight = 10.0
+        crash_weight = -10.0
+        step_weight = -0.02
+        progress_weight = 2.0
+        bearing_weight = 0.02              
+        angular_velocity_weight = 0.01
+        action_smoothness_weight = 0.02  
+        obstacle_proximity_weight = -0.02  
+
+        collided = bool(np.any(signals.raw_lidar < collision_range))
+        reached_goal = bool(signals.goal_distance < goal_tolerance)
+
+        progress_reward = progress_weight * (signals.previous_normalized_goal_distance - signals.normalized_goal_distance)
+        if reached_goal:
+            reward = reach_goal_weight + progress_reward
+        elif collided:
+            reward = crash_weight
+        else:
+            bearing_reward = -bearing_weight * abs(signals.normalized_bearing)
+            # Similar to oscilatory-behavior punishment in paper https://arxiv.org/pdf/2004.03089
+            angular_velocity_reward = -angular_velocity_weight * abs(signals.angular_velocity) if abs(signals.angular_velocity) > 0.2 else 0.0 
+            # Closes Obstacle Proximity reward adjusted for IPAPRecN
+            closest_obstacle_proximity = np.max(signals.processed_ranges).item()
+            obstacle_proximity_reward = obstacle_proximity_weight * closest_obstacle_proximity if closest_obstacle_proximity > 0.25 else 0.0
+            action_smoothness_reward = -action_smoothness_weight * np.sum((signals.current_action_vector - signals.previous_action_vector) ** 2)
+            reward = step_weight + progress_reward + bearing_reward + angular_velocity_reward + action_smoothness_reward + obstacle_proximity_reward
+        return float(reward), collided, reached_goal
+
