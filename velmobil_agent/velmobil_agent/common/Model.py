@@ -6,7 +6,6 @@ import flax.linen as nn
 from velmobil_agent.common.model_configuration import ModelConfig
 
 from sbx import PPO as ALGORITHM
-CONFIGURATION = 3
 
 
 """
@@ -20,7 +19,7 @@ Model
 """
 
 ALGORITHM_NAME = ALGORITHM.__name__
-
+CONFIGURATION = 3
 
 class Model:
     def __init__(self, env=None, model_path: str = None, algorithm = ALGORITHM, **kwargs):
