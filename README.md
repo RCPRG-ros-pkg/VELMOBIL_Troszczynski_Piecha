@@ -39,10 +39,10 @@ Start Visual Paradigm, choose **Project -> Open**, and select
 All diagrams are listed in the **Diagram Navigator** and can be edited there.
 
 ## Documentation
-See [DOCUMENTATION.md](DOCUMENTATION.md) for the repository structure, ROS 2 packages, configuration etc.
+See [Documentation](https://github.com/RCPRG-ros-pkg/VELMOBIL_Troszczynski_Piecha/wiki/Documentation) for the repository structure, ROS 2 packages, configuration etc.
 
 ## Instruction
-See [INSTRUCTION.md](INSTRUCTION.md) for how to run the simulation, training and inference, and how to drive VELMOBIL.
+See [Instruction](https://github.com/RCPRG-ros-pkg/VELMOBIL_Troszczynski_Piecha/wiki/Instruction) for how to run the simulation, training and inference, and how to drive VELMOBIL.
 
 ## Github Project
 [Here](https://github.com/orgs/RCPRG-ros-pkg/projects/22/views/1) is our Task Board used for progress control/dev logs.
