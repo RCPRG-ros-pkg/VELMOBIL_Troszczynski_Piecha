@@ -27,7 +27,7 @@ simulation_manager:
         goal_tolerance: 0.6
       s2:
         map: "curved_corridors"
-        static_obstacles_num: 5
+        static_obstacles_num: 0
         dynamic_obstacles_num: 0
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5
@@ -35,7 +35,7 @@ simulation_manager:
         goal_tolerance: 0.6
       s3:
         map: "four_way_hallway"
-        static_obstacles_num: 5
+        static_obstacles_num: 0
         dynamic_obstacles_num: 2
         min_obstacle_speed: 1.2
         max_obstacle_speed: 2.5

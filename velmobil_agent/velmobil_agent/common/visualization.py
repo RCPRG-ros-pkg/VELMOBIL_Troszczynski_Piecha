@@ -6,7 +6,7 @@ import numpy as np
 #   Training plots
 def plot_rewards(dfs: list[tuple[str, pd.DataFrame]], 
                 save_path: str,
-                smoothing_window: int):
+                smoothing_window: int = 50):
     series_list = []
     for label, df in dfs:
         series = df['reward'].reset_index(drop = True)
@@ -136,13 +136,13 @@ def plot_evaluation_time_to_goal(dfs: list[tuple[str, pd.DataFrame]],
 
 def visualization():
     plot_folder = 'src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/plots' 
-    dfs = [('PPO', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs/PPO_15112026_1323.csv'))]
-    eval_dfs = [('PPO', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_15112026_2240.csv'))]
-    plot_rewards(dfs = dfs, save_path = f'{plot_folder}/training_plots/RewardsPerEpisode_2.png', smoothing_window = 1)
-    plot_success_rate(dfs = dfs, save_path = f'{plot_folder}/training_plots/SuccessRatePerEpisode_2.png')
-    plot_time_to_goal(dfs = dfs, save_path = f'{plot_folder}/training_plots/TimeToGoalPerEpisode_2.png')
-    plot_evaluation_outcome(dfs = eval_dfs, save_path = f'{plot_folder}/inference_plots/OutcomePerStage_2.png')
-    plot_evaluation_time_to_goal(dfs = eval_dfs, save_path = f'{plot_folder}/inference_plots/TimeToGoalPerStage_2.png')
+    dfs = [('RF2', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs/PPO_16112026_1742.csv')), ('RF4', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/training_logs/PPO_15112026_1323.csv'))]
+    eval_dfs = [('RF2', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_16112026_2006.csv')), ('RF4', pd.read_csv('src/VELMOBIL_Troszczynski_Piecha/velmobil_agent/logs/evaluation_logs/PPO_15112026_2240.csv'))]
+    plot_rewards(dfs = dfs, save_path = f'{plot_folder}/training_plots/RewardsPerEpisode_RF24_compare.png')
+    plot_success_rate(dfs = dfs, save_path = f'{plot_folder}/training_plots/SuccessRatePerEpisode_RF24_compare.png')
+    plot_time_to_goal(dfs = dfs, save_path = f'{plot_folder}/training_plots/TimeToGoalPerEpisode_RF24_compare.png')
+    plot_evaluation_outcome(dfs = eval_dfs, save_path = f'{plot_folder}/inference_plots/OutcomePerStage_RF24_compare.png')
+    plot_evaluation_time_to_goal(dfs = eval_dfs, save_path = f'{plot_folder}/inference_plots/TimeToGoalPerStage_RF24_compare.png')
 
 
 if __name__ == "__main__":
