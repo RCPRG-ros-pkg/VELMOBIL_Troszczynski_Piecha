@@ -96,9 +96,9 @@
         <falloff>0</falloff>
       </spot>
     </light>
-
-    <!-- <include>
-      <uri>model://velmobil_gym_mini_obstacled</uri>
+<!-- 
+    <include>
+      <uri>model://four_way_hallway</uri>
       <pose>0 0 0 0 0 0</pose>
     </include> -->
 
